@@ -35,9 +35,13 @@ export const lerpColor = (color1: RGB, color2: RGB, amount: number): RGB => {
 };
 
 // Determine terrain type from noise value
-export const getTerrainTypeForHeight = (noiseValue: number): TerrainType => {
+// Now accepts an optional terrainHeights parameter for dynamic height thresholds
+export const getTerrainTypeForHeight = (
+  noiseValue: number,
+  terrainHeights = TERRAIN_HEIGHTS
+): TerrainType => {
   for (const terrainType of ALL_TERRAIN_TYPES) {
-    const heights = TERRAIN_HEIGHTS[terrainType];
+    const heights = terrainHeights[terrainType];
     if (noiseValue <= heights.max) {
       return terrainType;
     }
@@ -47,12 +51,14 @@ export const getTerrainTypeForHeight = (noiseValue: number): TerrainType => {
 };
 
 // Get correct color for a terrain based on noise value
+// Now accepts an optional terrainHeights parameter for dynamic height thresholds
 export const getTerrainColor = (
   noiseValue: number,
-  terrainType: TerrainType
+  terrainType: TerrainType,
+  terrainHeights = TERRAIN_HEIGHTS
 ): RGB => {
   const terrain = TERRAIN_COLORS[terrainType];
-  const heights = TERRAIN_HEIGHTS[terrainType];
+  const heights = terrainHeights[terrainType];
 
   // Normalize noise value within terrain height range and apply adjustment
   let t = normalize(noiseValue, heights.min, heights.max);
@@ -72,10 +78,12 @@ export interface Tile {
 }
 
 // Generate a grid of tiles based on noise values
+// Now accepts an optional terrainHeights parameter for dynamic height thresholds
 export const generateTileGrid = (
   width: number,
   height: number,
-  getNoise: (x: number, y: number) => number
+  getNoise: (x: number, y: number) => number,
+  terrainHeights = TERRAIN_HEIGHTS
 ): Tile[][] => {
   const grid: Tile[][] = [];
 
@@ -83,8 +91,8 @@ export const generateTileGrid = (
     const row: Tile[] = [];
     for (let x = 0; x < width; x++) {
       const noiseValue = getNoise(x, y);
-      const terrainType = getTerrainTypeForHeight(noiseValue);
-      const color = getTerrainColor(noiseValue, terrainType);
+      const terrainType = getTerrainTypeForHeight(noiseValue, terrainHeights);
+      const color = getTerrainColor(noiseValue, terrainType, terrainHeights);
 
       row.push({
         terrainType,

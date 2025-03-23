@@ -20,6 +20,10 @@ export const CAMERA_SPEED = 10; // Speed for camera movement
 export const INITIAL_OFFSET_X = WORLD_GRID_WIDTH / 2; // Initial camera position (center of world)
 export const INITIAL_OFFSET_Y = WORLD_GRID_HEIGHT / 2; // Initial camera position (center of world)
 
+// Performance settings
+export const LOW_ZOOM_THRESHOLD = 0.5; // Threshold for low zoom performance optimizations
+export const LOW_ZOOM_TILE_FACTOR = 4; // Factor to reduce tile count when zoomed out
+
 // Terrain type identifiers
 export enum TerrainType {
   OCEAN_DEEP = 0,
@@ -31,16 +35,64 @@ export enum TerrainType {
   SNOW = 6,
 }
 
-// Terrain height thresholds (noise values)
-// Adjusted to create more island/continent-like formations
+// Biome weight presets - These determine the relative distribution of terrain types
+// Higher weight means more of that terrain type will appear in the world
+export const BIOME_PRESETS = {
+  // Islands preset - Mostly ocean with some small islands
+  ISLANDS: [70, 20, 20, 12, 35, 30, 0], // Matches WEIGHTS1 from Python reference
+  // Continents preset - More balanced with larger landmasses
+  CONTINENTS: [35, 20, 20, 15, 30, 30, 25], // Matches WEIGHTS2 from Python reference
+  // Lakes preset - Mostly land with some lakes/ocean areas
+  LAKES: [20, 15, 15, 15, 50, 35, 45], // Matches WEIGHTS3 from Python reference
+  // Custom preset - User defined
+  CUSTOM: [35, 20, 20, 15, 30, 30, 25],
+};
+
+// Terrain height thresholds (noise values) - these will be dynamically calculated from weights
+// These are default fallback values if weight-based calculation is not used
 export const TERRAIN_HEIGHTS = {
-  [TerrainType.OCEAN_DEEP]: { min: 0.0, max: 0.35 }, // Increased ocean coverage
+  [TerrainType.OCEAN_DEEP]: { min: 0.0, max: 0.35 },
   [TerrainType.OCEAN_MEDIUM]: { min: 0.35, max: 0.4 },
   [TerrainType.OCEAN_SHALLOW]: { min: 0.4, max: 0.45 },
   [TerrainType.BEACH]: { min: 0.45, max: 0.5 },
   [TerrainType.GRASS]: { min: 0.5, max: 0.65 },
   [TerrainType.MOUNTAIN]: { min: 0.65, max: 0.75 },
   [TerrainType.SNOW]: { min: 0.75, max: 1.0 },
+};
+
+// Function to calculate height thresholds based on weights
+// This is similar to the Python implementation in the reference code
+export const calculateTerrainHeights = (
+  weights: number[]
+): typeof TERRAIN_HEIGHTS => {
+  // Make a copy of the default heights
+  const newHeights = { ...TERRAIN_HEIGHTS };
+
+  // Calculate total weight sum
+  const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
+  // Range from 0 to 1
+  const totalRange = 1.0;
+
+  // Calculate maximum height for each terrain type based on weight values
+  let previousHeight = 0.0;
+  for (let i = 0; i < weights.length; i++) {
+    const terrainType = i as TerrainType;
+    const heightRange = totalRange * (weights[i] / totalWeight);
+
+    newHeights[terrainType] = {
+      min: previousHeight,
+      max: previousHeight + heightRange,
+    };
+
+    previousHeight += heightRange;
+  }
+
+  // Ensure the last terrain type goes to 1.0
+  if (weights.length > 0) {
+    newHeights[(weights.length - 1) as TerrainType].max = 1.0;
+  }
+
+  return newHeights;
 };
 
 // Terrain colors (min and max for gradient effect)
@@ -92,6 +144,25 @@ export const ALL_TERRAIN_TYPES = [
   TerrainType.MOUNTAIN,
   TerrainType.SNOW,
 ];
+
+// Terrain type names for UI display
+export const TERRAIN_NAMES = {
+  [TerrainType.OCEAN_DEEP]: "Deep Ocean",
+  [TerrainType.OCEAN_MEDIUM]: "Medium Ocean",
+  [TerrainType.OCEAN_SHALLOW]: "Shallow Ocean",
+  [TerrainType.BEACH]: "Beach",
+  [TerrainType.GRASS]: "Grassland",
+  [TerrainType.MOUNTAIN]: "Mountains",
+  [TerrainType.SNOW]: "Snow",
+};
+
+// Visualization modes for the map
+export enum VisualizationMode {
+  BIOME = "biome", // Normal colored biome view
+  NOISE = "noise", // Raw Perlin noise values as grayscale
+  ELEVATION = "elevation", // Elevation using a height gradient
+  WEIGHT_DISTRIBUTION = "weight", // Shows how weights affect terrain distribution
+}
 
 // Tile grid constants
 export const GRID_WIDTH =

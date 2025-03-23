@@ -22,6 +22,12 @@ import {
   WORLD_GRID_HEIGHT,
   GRID_VISIBLE_THRESHOLD,
   COORDS_VISIBLE_THRESHOLD,
+  TerrainType,
+  BIOME_PRESETS,
+  VisualizationMode,
+  calculateTerrainHeights,
+  LOW_ZOOM_THRESHOLD,
+  LOW_ZOOM_TILE_FACTOR,
 } from "./config";
 import { PerlinNoise, createNoiseGenerator } from "./noiseGenerator";
 import {
@@ -40,6 +46,10 @@ interface WorldMapProps {
   tileSize?: number;
   seed?: number;
   debug?: boolean;
+  biomeWeights?: number[];
+  noiseDetail?: number;
+  noiseFalloff?: number;
+  visualizationMode?: VisualizationMode;
 }
 
 interface CameraState {
@@ -54,6 +64,10 @@ const WorldMap: React.FC<WorldMapProps> = ({
   tileSize = DEFAULT_TILE_SIZE,
   seed = DEFAULT_SEED,
   debug = DEBUG_MODE,
+  biomeWeights = BIOME_PRESETS.CONTINENTS,
+  noiseDetail = NOISE_DETAIL,
+  noiseFalloff = NOISE_FALLOFF,
+  visualizationMode = VisualizationMode.BIOME,
 }) => {
   // Canvas and rendering references
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -74,20 +88,31 @@ const WorldMap: React.FC<WorldMapProps> = ({
     y: 0,
   });
 
+  // Cache the terrain heights calculated from weights
+  // This improves performance by not recalculating on every render
+  const terrainHeights = useMemo(() => {
+    return calculateTerrainHeights(biomeWeights);
+  }, [biomeWeights]);
+
   // Create noise generator with specified seed
   const noiseGeneratorRef = useRef<PerlinNoise>(
-    createNoiseGenerator(seed, NOISE_DETAIL, NOISE_FALLOFF)
+    createNoiseGenerator(seed, noiseDetail, noiseFalloff)
   );
 
-  // When seed changes, update the noise generator
+  // When seed, detail or falloff changes, update the noise generator
   useEffect(() => {
     noiseGeneratorRef.current = createNoiseGenerator(
       seed,
-      NOISE_DETAIL,
-      NOISE_FALLOFF
+      noiseDetail,
+      noiseFalloff
     );
     setMapChanged(true);
-  }, [seed]);
+  }, [seed, noiseDetail, noiseFalloff]);
+
+  // Re-render map when visualization mode or biome weights change
+  useEffect(() => {
+    setMapChanged(true);
+  }, [visualizationMode, biomeWeights]);
 
   // Key states for camera movement
   const keyStates = useRef<{ [key: string]: boolean }>({
@@ -135,25 +160,43 @@ const WorldMap: React.FC<WorldMapProps> = ({
   // Calculate which grid cells are visible in the current view
   const getVisibleGridCells = (
     camera: CameraState,
-    zoom: number
-  ): { startX: number; startY: number; endX: number; endY: number } => {
+    zoom: number,
+    isLowZoom: boolean
+  ): {
+    startX: number;
+    startY: number;
+    endX: number;
+    endY: number;
+    skipFactor: number;
+  } => {
     // Calculate actual tile size with zoom applied
     const currentTileSize = calculateTileSize(zoom);
 
-    // Calculate how many tiles fit in the viewport
+    // Determine skip factor for low zoom levels
+    // This reduces the number of tiles rendered at low zoom levels
+    const skipFactor = isLowZoom ? LOW_ZOOM_TILE_FACTOR : 1;
+
+    // Adjust for skip factor when calculating how many tiles to render
     const tilesX = Math.ceil(width / currentTileSize) + 1; // +1 to handle partial tiles
     const tilesY = Math.ceil(height / currentTileSize) + 1;
 
     // Calculate the starting tile based on camera position
     // Camera position is center of view, so offset by half the visible tiles
-    const startX = Math.max(0, Math.floor(camera.x - tilesX / 2));
-    const startY = Math.max(0, Math.floor(camera.y - tilesY / 2));
+    // We need to adjust for the skip factor to ensure we get the right starting point
+    const startX = Math.max(
+      0,
+      Math.floor((camera.x - tilesX / 2) / skipFactor) * skipFactor
+    );
+    const startY = Math.max(
+      0,
+      Math.floor((camera.y - tilesY / 2) / skipFactor) * skipFactor
+    );
 
     // Calculate the ending tile, clamped to world boundaries
-    const endX = Math.min(WORLD_GRID_WIDTH - 1, startX + tilesX);
-    const endY = Math.min(WORLD_GRID_HEIGHT - 1, startY + tilesY);
+    const endX = Math.min(WORLD_GRID_WIDTH - 1, startX + tilesX * skipFactor);
+    const endY = Math.min(WORLD_GRID_HEIGHT - 1, startY + tilesY * skipFactor);
 
-    return { startX, startY, endX, endY };
+    return { startX, startY, endX, endY, skipFactor };
   };
 
   // Animation loop for camera movement and rendering
@@ -300,6 +343,46 @@ const WorldMap: React.FC<WorldMapProps> = ({
     };
   }, [debug]);
 
+  // Get color based on the current visualization mode
+  const getVisualizationColor = (
+    noiseValue: number,
+    terrainType: TerrainType
+  ): RGB => {
+    switch (visualizationMode) {
+      case VisualizationMode.NOISE:
+        // Display raw noise values as grayscale
+        const val = Math.round(noiseValue * 255);
+        return { r: val, g: val, b: val };
+
+      case VisualizationMode.ELEVATION:
+        // Display elevation using a gradient from blue (low) to white (high)
+        return {
+          r: Math.round(40 + noiseValue * 215),
+          g: Math.round(80 + noiseValue * 175),
+          b: Math.round(120 + noiseValue * 135),
+        };
+
+      case VisualizationMode.WEIGHT_DISTRIBUTION:
+        // Show how weights affect terrain distribution
+        // Each terrain type gets a distinct color
+        const colors = [
+          { r: 30, g: 144, b: 255 }, // Ocean Deep: DodgerBlue
+          { r: 135, g: 206, b: 250 }, // Ocean Medium: LightSkyBlue
+          { r: 0, g: 255, b: 255 }, // Ocean Shallow: Cyan
+          { r: 255, g: 223, b: 0 }, // Beach: Gold
+          { r: 124, g: 252, b: 0 }, // Grass: LawnGreen
+          { r: 160, g: 82, b: 45 }, // Mountain: Sienna
+          { r: 255, g: 250, b: 250 }, // Snow: Snow
+        ];
+        return colors[terrainType];
+
+      case VisualizationMode.BIOME:
+      default:
+        // Default biome colors with interpolation
+        return getTerrainColor(noiseValue, terrainType);
+    }
+  };
+
   // Main render function
   useEffect(() => {
     if (!mapChanged) return;
@@ -314,13 +397,17 @@ const WorldMap: React.FC<WorldMapProps> = ({
 
     if (!ctx || !offCtx) return;
 
+    // Check if we're at a low zoom level where optimization is needed
+    const isLowZoom = camera.zoom < LOW_ZOOM_THRESHOLD;
+
     // Get current tile size based on zoom level
     const currentTileSize = calculateTileSize(camera.zoom);
 
-    // Calculate visible grid cells
-    const { startX, startY, endX, endY } = getVisibleGridCells(
+    // Calculate visible grid cells with potential skip factor for low zoom
+    const { startX, startY, endX, endY, skipFactor } = getVisibleGridCells(
       camera,
-      camera.zoom
+      camera.zoom,
+      isLowZoom
     );
 
     // Calculate pixel offset for rendering (to handle partial tiles)
@@ -341,26 +428,16 @@ const WorldMap: React.FC<WorldMapProps> = ({
 
     // Generate only the visible tiles (lazy loading)
     // We only generate tiles that are actually visible in the viewport
-    for (let worldY = startY; worldY <= endY; worldY++) {
-      for (let worldX = startX; worldX <= endX; worldX++) {
+    for (let worldY = startY; worldY <= endY; worldY += skipFactor) {
+      for (let worldX = startX; worldX <= endX; worldX += skipFactor) {
         // Get the noise value for this world position
         const noiseValue = getNoise(worldX, worldY);
 
-        // Determine terrain type and color based on noise value
-        const tile = {
-          x: worldX,
-          y: worldY,
-          noiseValue,
-          terrainType: 0, // This will be set in terrainUtils
-          color: { r: 0, g: 0, b: 0 }, // This will be set in terrainUtils
-        };
+        // Determine terrain type based on noise value and terrain heights from weights
+        const terrainType = getTerrainTypeForHeight(noiseValue, terrainHeights);
 
-        // Get the correct terrain type and color for this tile
-        const terrainType = getTerrainTypeForHeight(noiseValue);
-        const color = getTerrainColor(noiseValue, terrainType);
-
-        tile.terrainType = terrainType;
-        tile.color = color;
+        // Get appropriate color based on visualization mode
+        const color = getVisualizationColor(noiseValue, terrainType);
 
         // Calculate screen position for this tile
         const screenX =
@@ -368,18 +445,33 @@ const WorldMap: React.FC<WorldMapProps> = ({
         const screenY =
           (worldY - startY) * currentTileSize - offsetY + height / 2;
 
+        // For low zoom levels, we draw larger tiles to improve performance
+        const renderSize = isLowZoom
+          ? currentTileSize * skipFactor
+          : currentTileSize;
+
         // Draw the tile with the calculated color
         offCtx.fillStyle = rgbToString(color);
-        offCtx.fillRect(screenX, screenY, currentTileSize, currentTileSize);
+        offCtx.fillRect(screenX, screenY, renderSize, renderSize);
 
         // Draw grid lines if enabled and zoom level is high enough
-        if (debug && SHOW_GRID && camera.zoom >= GRID_VISIBLE_THRESHOLD) {
+        if (
+          debug &&
+          SHOW_GRID &&
+          camera.zoom >= GRID_VISIBLE_THRESHOLD &&
+          !isLowZoom
+        ) {
           offCtx.strokeStyle = "rgba(0, 0, 0, 0.2)";
-          offCtx.strokeRect(screenX, screenY, currentTileSize, currentTileSize);
+          offCtx.strokeRect(screenX, screenY, renderSize, renderSize);
         }
 
         // Show coordinates in debug mode when zoomed in far enough
-        if (debug && SHOW_COORDS && camera.zoom >= COORDS_VISIBLE_THRESHOLD) {
+        if (
+          debug &&
+          SHOW_COORDS &&
+          camera.zoom >= COORDS_VISIBLE_THRESHOLD &&
+          !isLowZoom
+        ) {
           offCtx.fillStyle = "rgba(0, 0, 0, 0.5)";
           offCtx.font = `${Math.max(8, currentTileSize / 4)}px Arial`;
           offCtx.fillText(
@@ -389,6 +481,17 @@ const WorldMap: React.FC<WorldMapProps> = ({
           );
         }
       }
+    }
+
+    // Additional visualization mode overlay indicators
+    if (visualizationMode !== VisualizationMode.BIOME) {
+      offCtx.fillStyle = "rgba(0, 0, 0, 0.7)";
+      offCtx.font = "14px Arial";
+      offCtx.fillText(
+        `Visualization Mode: ${visualizationMode.toUpperCase()}`,
+        10,
+        30
+      );
     }
 
     // Copy from offscreen canvas to visible canvas
@@ -417,19 +520,34 @@ const WorldMap: React.FC<WorldMapProps> = ({
         // Get the noise value for this tile
         const noiseValue = getNoise(tileX, tileY);
 
+        // Get the terrain type
+        const terrainType = getTerrainTypeForHeight(noiseValue, terrainHeights);
+
         // Update debug info
         setDebugInfo(
           `Tile: (${tileX}, ${tileY}) | ` +
             `Noise: ${noiseValue.toFixed(3)} | ` +
+            `Terrain: ${TerrainType[terrainType]} | ` +
             `Zoom: ${camera.zoom.toFixed(2)} | ` +
-            `View: (${startX}-${endX}, ${startY}-${endY}) | ` +
+            `View: ${isLowZoom ? "Low-res" : "Full-res"} | ` +
+            `Skip: ${skipFactor} | ` +
             `Camera: (${camera.x.toFixed(1)}, ${camera.y.toFixed(1)})`
         );
       }
     }
 
     setMapChanged(false);
-  }, [mapChanged, width, height, tileSize, camera, debug, mousePos]);
+  }, [
+    mapChanged,
+    width,
+    height,
+    tileSize,
+    camera,
+    debug,
+    mousePos,
+    visualizationMode,
+    terrainHeights,
+  ]);
 
   return (
     <div className="world-map-container" style={{ position: "relative" }}>
