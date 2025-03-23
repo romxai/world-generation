@@ -16,7 +16,7 @@ export const NOISE_FALLOFF = 0.2; // Falloff rate for noise
 export const DEFAULT_OCTAVES = 4; // Default number of octaves for noise
 export const DEFAULT_OCTAVE_WEIGHT = 0.5; // Default weight for each octave
 export const DEFAULT_MOISTURE_SCALE = 150; // Default scale for moisture noise (higher = larger features)
-export const DEFAULT_ELEVATION_SCALE = 100; // Default scale for elevation noise (higher = larger features)
+export const DEFAULT_ELEVATION_SCALE = 200; // Default scale for elevation noise (higher = larger features)
 
 // Temperature & climate settings
 export const DEFAULT_EQUATOR_POSITION = 0.5; // Where the equator is located (0-1)

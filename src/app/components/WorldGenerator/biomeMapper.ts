@@ -24,7 +24,7 @@ export const ELEVATION_BANDS = {
   WATER_SHALLOW: 0.4,
   SHORE: 0.45,
   LOW: 0.55,
-  MEDIUM: 0.7,
+  MEDIUM: 0.65,
   HIGH: 0.8,
   VERY_HIGH: 0.9,
 };
