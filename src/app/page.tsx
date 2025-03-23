@@ -17,6 +17,12 @@ import {
   NOISE_FALLOFF,
   calculateTerrainHeights,
   ALL_TERRAIN_TYPES,
+  DEFAULT_OCTAVES,
+  DEFAULT_ELEVATION_SCALE,
+  DEFAULT_MOISTURE_SCALE,
+  DEFAULT_OCTAVE_WEIGHT,
+  BIOME_NAMES,
+  BiomeType,
 } from "./components/WorldGenerator/config";
 
 export default function Home() {
@@ -38,8 +44,27 @@ export default function Home() {
   const [noiseDetail, setNoiseDetail] = useState<number>(NOISE_DETAIL);
   const [noiseFalloff, setNoiseFalloff] = useState<number>(NOISE_FALLOFF);
 
+  // New multi-octave noise settings
+  const [elevationOctaves, setElevationOctaves] =
+    useState<number>(DEFAULT_OCTAVES);
+  const [moistureOctaves, setMoistureOctaves] =
+    useState<number>(DEFAULT_OCTAVES);
+  const [elevationScale, setElevationScale] = useState<number>(
+    DEFAULT_ELEVATION_SCALE
+  );
+  const [moistureScale, setMoistureScale] = useState<number>(
+    DEFAULT_MOISTURE_SCALE
+  );
+  const [elevationPersistence, setElevationPersistence] = useState<number>(
+    DEFAULT_OCTAVE_WEIGHT
+  );
+  const [moisturePersistence, setMoisturePersistence] = useState<number>(
+    DEFAULT_OCTAVE_WEIGHT
+  );
+
   // UI state
   const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
+  const [showNoiseSettings, setShowNoiseSettings] = useState(false);
   const [showWeightEditor, setShowWeightEditor] = useState(false);
   const [customWeights, setCustomWeights] = useState<number[]>([
     ...BIOME_PRESETS.CUSTOM,
@@ -131,6 +156,7 @@ export default function Home() {
                 <option value={VisualizationMode.BIOME}>Biome Colors</option>
                 <option value={VisualizationMode.NOISE}>Raw Noise</option>
                 <option value={VisualizationMode.ELEVATION}>Elevation</option>
+                <option value={VisualizationMode.MOISTURE}>Moisture</option>
                 <option value={VisualizationMode.WEIGHT_DISTRIBUTION}>
                   Weight Distribution
                 </option>
@@ -162,13 +188,21 @@ export default function Home() {
           </div>
 
           {/* Advanced controls toggle */}
-          <div className="mt-4">
+          <div className="mt-4 flex flex-col gap-2">
             <button
               onClick={() => setShowAdvancedSettings(!showAdvancedSettings)}
               className="text-sm text-blue-400 hover:text-blue-300 flex items-center"
             >
               {showAdvancedSettings ? "▼ " : "► "}
               Advanced Settings
+            </button>
+
+            <button
+              onClick={() => setShowNoiseSettings(!showNoiseSettings)}
+              className="text-sm text-blue-400 hover:text-blue-300 flex items-center"
+            >
+              {showNoiseSettings ? "▼ " : "► "}
+              Noise Generator Settings
             </button>
           </div>
 
@@ -238,6 +272,143 @@ export default function Home() {
                     className="bg-gray-800 rounded h-5 w-5"
                   />
                   <label htmlFor="debug">Show Debug Information</label>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Noise Generator Settings */}
+          {showNoiseSettings && (
+            <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Elevation Noise Settings */}
+              <div className="bg-gray-700 p-3 rounded-md">
+                <h3 className="font-medium mb-2">Elevation Noise Settings</h3>
+
+                <div className="mb-2">
+                  <label className="block text-sm mb-1">Octaves</label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="range"
+                      min="1"
+                      max="8"
+                      value={elevationOctaves}
+                      onChange={(e) =>
+                        setElevationOctaves(Number(e.target.value))
+                      }
+                      className="w-full"
+                    />
+                    <span className="text-xs">{elevationOctaves}</span>
+                  </div>
+                  <p className="text-xs text-gray-400">
+                    Higher values add more detail
+                  </p>
+                </div>
+
+                <div className="mb-2">
+                  <label className="block text-sm mb-1">Scale</label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="range"
+                      min="50"
+                      max="500"
+                      step="10"
+                      value={elevationScale}
+                      onChange={(e) =>
+                        setElevationScale(Number(e.target.value))
+                      }
+                      className="w-full"
+                    />
+                    <span className="text-xs">{elevationScale}</span>
+                  </div>
+                  <p className="text-xs text-gray-400">
+                    Higher values create larger land features
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm mb-1">Persistence</label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="range"
+                      min="0.1"
+                      max="0.9"
+                      step="0.05"
+                      value={elevationPersistence}
+                      onChange={(e) =>
+                        setElevationPersistence(Number(e.target.value))
+                      }
+                      className="w-full"
+                    />
+                    <span className="text-xs">{elevationPersistence}</span>
+                  </div>
+                  <p className="text-xs text-gray-400">
+                    How much detail each octave adds
+                  </p>
+                </div>
+              </div>
+
+              {/* Moisture Noise Settings */}
+              <div className="bg-gray-700 p-3 rounded-md">
+                <h3 className="font-medium mb-2">Moisture Noise Settings</h3>
+
+                <div className="mb-2">
+                  <label className="block text-sm mb-1">Octaves</label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="range"
+                      min="1"
+                      max="8"
+                      value={moistureOctaves}
+                      onChange={(e) =>
+                        setMoistureOctaves(Number(e.target.value))
+                      }
+                      className="w-full"
+                    />
+                    <span className="text-xs">{moistureOctaves}</span>
+                  </div>
+                  <p className="text-xs text-gray-400">
+                    Higher values add more detail
+                  </p>
+                </div>
+
+                <div className="mb-2">
+                  <label className="block text-sm mb-1">Scale</label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="range"
+                      min="50"
+                      max="500"
+                      step="10"
+                      value={moistureScale}
+                      onChange={(e) => setMoistureScale(Number(e.target.value))}
+                      className="w-full"
+                    />
+                    <span className="text-xs">{moistureScale}</span>
+                  </div>
+                  <p className="text-xs text-gray-400">
+                    Higher values create larger moisture regions
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm mb-1">Persistence</label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="range"
+                      min="0.1"
+                      max="0.9"
+                      step="0.05"
+                      value={moisturePersistence}
+                      onChange={(e) =>
+                        setMoisturePersistence(Number(e.target.value))
+                      }
+                      className="w-full"
+                    />
+                    <span className="text-xs">{moisturePersistence}</span>
+                  </div>
+                  <p className="text-xs text-gray-400">
+                    How much detail each octave adds
+                  </p>
                 </div>
               </div>
             </div>
@@ -326,15 +497,8 @@ export default function Home() {
         )}
       </div>
 
-      <div className="mb-2">
-        <div className="text-sm text-gray-400 mb-2 text-center">
-          <strong>Controls:</strong> Use arrow keys to navigate the map, mouse
-          wheel to zoom
-        </div>
-
+      <div className="w-full max-w-6xl">
         <WorldMap
-          width={WINDOW_WIDTH}
-          height={WINDOW_HEIGHT}
           seed={seed}
           debug={debug}
           tileSize={tileSize}
@@ -342,6 +506,12 @@ export default function Home() {
           noiseDetail={noiseDetail}
           noiseFalloff={noiseFalloff}
           visualizationMode={visualizationMode}
+          elevationOctaves={elevationOctaves}
+          moistureOctaves={moistureOctaves}
+          elevationScale={elevationScale}
+          moistureScale={moistureScale}
+          elevationPersistence={elevationPersistence}
+          moisturePersistence={moisturePersistence}
         />
       </div>
 

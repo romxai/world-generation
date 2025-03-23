@@ -13,8 +13,14 @@ export const WORLD_GRID_HEIGHT = 1000; // Fixed number of tiles in the world (y-
 export const DEFAULT_SEED = 42; // Default seed for reproducible generation
 export const NOISE_DETAIL = 9; // Detail level for noise generation
 export const NOISE_FALLOFF = 0.2; // Falloff rate for noise
+export const DEFAULT_OCTAVES = 4; // Default number of octaves for noise
+export const DEFAULT_OCTAVE_WEIGHT = 0.5; // Default weight for each octave
+export const DEFAULT_MOISTURE_SCALE = 200; // Default scale for moisture noise (higher = larger features)
+export const DEFAULT_ELEVATION_SCALE = 150; // Default scale for elevation noise (higher = larger features)
+
+// Camera and zoom settings
 export const INITIAL_ZOOM = 1.0; // Starting zoom level (1.0 = 100%)
-export const MIN_ZOOM = 0.1; // Minimum zoom allowed (10%)
+export const MIN_ZOOM = 0.01; // Minimum zoom allowed (10%)
 export const MAX_ZOOM = 5.0; // Maximum zoom allowed (500%)
 export const CAMERA_SPEED = 10; // Speed for camera movement
 export const INITIAL_OFFSET_X = WORLD_GRID_WIDTH / 2; // Initial camera position (center of world)
@@ -33,6 +39,41 @@ export enum TerrainType {
   GRASS = 4,
   MOUNTAIN = 5,
   SNOW = 6,
+}
+
+// Biome identifiers - expanded biome system
+export enum BiomeType {
+  // Water biomes
+  OCEAN_DEEP = 0,
+  OCEAN_MEDIUM = 1,
+  OCEAN_SHALLOW = 2,
+
+  // Beach/shore biomes
+  BEACH = 3,
+  ROCKY_SHORE = 4,
+
+  // Dry lowlands
+  SUBTROPICAL_DESERT = 5,
+  TEMPERATE_DESERT = 6,
+
+  // Humid lowlands
+  TROPICAL_RAINFOREST = 7,
+  TROPICAL_SEASONAL_FOREST = 8,
+  GRASSLAND = 9,
+
+  // Medium elevation
+  TEMPERATE_DECIDUOUS_FOREST = 10,
+  TEMPERATE_GRASSLAND = 11,
+  SHRUBLAND = 12,
+
+  // High elevation areas
+  TAIGA = 13,
+  TUNDRA = 14,
+
+  // Very high elevation areas
+  BARE = 15,
+  SCORCHED = 16,
+  SNOW = 17,
 }
 
 // Biome weight presets - These determine the relative distribution of terrain types
@@ -58,6 +99,15 @@ export const TERRAIN_HEIGHTS = {
   [TerrainType.GRASS]: { min: 0.5, max: 0.65 },
   [TerrainType.MOUNTAIN]: { min: 0.65, max: 0.75 },
   [TerrainType.SNOW]: { min: 0.75, max: 1.0 },
+};
+
+// Default moisture thresholds - used for biome determination
+export const MOISTURE_THRESHOLDS = {
+  VERY_DRY: 0.2,
+  DRY: 0.4,
+  MEDIUM: 0.6,
+  WET: 0.8,
+  VERY_WET: 1.0,
 };
 
 // Function to calculate height thresholds based on weights
@@ -134,6 +184,41 @@ export const TERRAIN_COLORS = {
   },
 };
 
+// Extended biome colors for the new biome system
+export const BIOME_COLORS = {
+  // Water biomes
+  [BiomeType.OCEAN_DEEP]: { r: 30, g: 120, b: 200 },
+  [BiomeType.OCEAN_MEDIUM]: { r: 35, g: 140, b: 220 },
+  [BiomeType.OCEAN_SHALLOW]: { r: 40, g: 160, b: 230 },
+
+  // Beach/shore biomes
+  [BiomeType.BEACH]: { r: 245, g: 236, b: 150 },
+  [BiomeType.ROCKY_SHORE]: { r: 180, g: 180, b: 160 },
+
+  // Dry lowlands
+  [BiomeType.SUBTROPICAL_DESERT]: { r: 240, g: 215, b: 140 },
+  [BiomeType.TEMPERATE_DESERT]: { r: 225, g: 195, b: 120 },
+
+  // Humid lowlands
+  [BiomeType.TROPICAL_RAINFOREST]: { r: 40, g: 195, b: 50 },
+  [BiomeType.TROPICAL_SEASONAL_FOREST]: { r: 70, g: 195, b: 90 },
+  [BiomeType.GRASSLAND]: { r: 160, g: 220, b: 110 },
+
+  // Medium elevation
+  [BiomeType.TEMPERATE_DECIDUOUS_FOREST]: { r: 50, g: 140, b: 60 },
+  [BiomeType.TEMPERATE_GRASSLAND]: { r: 130, g: 196, b: 90 },
+  [BiomeType.SHRUBLAND]: { r: 160, g: 180, b: 120 },
+
+  // High elevation areas
+  [BiomeType.TAIGA]: { r: 120, g: 155, b: 135 },
+  [BiomeType.TUNDRA]: { r: 180, g: 200, b: 170 },
+
+  // Very high elevation areas
+  [BiomeType.BARE]: { r: 140, g: 135, b: 130 },
+  [BiomeType.SCORCHED]: { r: 95, g: 90, b: 85 },
+  [BiomeType.SNOW]: { r: 240, g: 240, b: 240 },
+};
+
 // List of terrain types in order of height
 export const ALL_TERRAIN_TYPES = [
   TerrainType.OCEAN_DEEP,
@@ -156,11 +241,34 @@ export const TERRAIN_NAMES = {
   [TerrainType.SNOW]: "Snow",
 };
 
+// Biome type names for UI display
+export const BIOME_NAMES = {
+  [BiomeType.OCEAN_DEEP]: "Deep Ocean",
+  [BiomeType.OCEAN_MEDIUM]: "Medium Ocean",
+  [BiomeType.OCEAN_SHALLOW]: "Shallow Ocean",
+  [BiomeType.BEACH]: "Sandy Beach",
+  [BiomeType.ROCKY_SHORE]: "Rocky Shore",
+  [BiomeType.SUBTROPICAL_DESERT]: "Subtropical Desert",
+  [BiomeType.TEMPERATE_DESERT]: "Temperate Desert",
+  [BiomeType.TROPICAL_RAINFOREST]: "Tropical Rainforest",
+  [BiomeType.TROPICAL_SEASONAL_FOREST]: "Tropical Seasonal Forest",
+  [BiomeType.GRASSLAND]: "Grassland",
+  [BiomeType.TEMPERATE_DECIDUOUS_FOREST]: "Deciduous Forest",
+  [BiomeType.TEMPERATE_GRASSLAND]: "Temperate Grassland",
+  [BiomeType.SHRUBLAND]: "Shrubland",
+  [BiomeType.TAIGA]: "Taiga",
+  [BiomeType.TUNDRA]: "Tundra",
+  [BiomeType.BARE]: "Bare",
+  [BiomeType.SCORCHED]: "Scorched",
+  [BiomeType.SNOW]: "Snow",
+};
+
 // Visualization modes for the map
 export enum VisualizationMode {
   BIOME = "biome", // Normal colored biome view
   NOISE = "noise", // Raw Perlin noise values as grayscale
   ELEVATION = "elevation", // Elevation using a height gradient
+  MOISTURE = "moisture", // Moisture using a blue gradient
   WEIGHT_DISTRIBUTION = "weight", // Shows how weights affect terrain distribution
 }
 

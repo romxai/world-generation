@@ -105,7 +105,7 @@ export class PerlinNoise {
   get(x: number, y: number): number {
     let value = 0;
     let amplitude = 1;
-    let frequency = 1;
+    let frequency = 2;
     let max = 0;
 
     // Sum multiple noise functions with different frequencies

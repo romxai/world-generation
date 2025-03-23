@@ -28,17 +28,16 @@ import {
   calculateTerrainHeights,
   LOW_ZOOM_THRESHOLD,
   LOW_ZOOM_TILE_FACTOR,
+  DEFAULT_OCTAVES,
+  DEFAULT_ELEVATION_SCALE,
+  DEFAULT_MOISTURE_SCALE,
+  DEFAULT_OCTAVE_WEIGHT,
+  BiomeType,
+  BIOME_NAMES,
 } from "./config";
 import { PerlinNoise, createNoiseGenerator } from "./noiseGenerator";
-import {
-  RGB,
-  Tile,
-  generateTileGrid,
-  rgbToString,
-  getTileEdgeType,
-  getTerrainTypeForHeight,
-  getTerrainColor,
-} from "./terrainUtils";
+import { WorldGenerator, WorldGeneratorConfig } from "./worldGenerator";
+import { RGB, rgbToString } from "./terrainUtils";
 
 interface WorldMapProps {
   width?: number;
@@ -50,6 +49,13 @@ interface WorldMapProps {
   noiseDetail?: number;
   noiseFalloff?: number;
   visualizationMode?: VisualizationMode;
+  // New properties for advanced generation
+  elevationOctaves?: number;
+  moistureOctaves?: number;
+  elevationScale?: number;
+  moistureScale?: number;
+  elevationPersistence?: number;
+  moisturePersistence?: number;
 }
 
 interface CameraState {
@@ -68,6 +74,13 @@ const WorldMap: React.FC<WorldMapProps> = ({
   noiseDetail = NOISE_DETAIL,
   noiseFalloff = NOISE_FALLOFF,
   visualizationMode = VisualizationMode.BIOME,
+  // New properties with defaults
+  elevationOctaves = DEFAULT_OCTAVES,
+  moistureOctaves = DEFAULT_OCTAVES,
+  elevationScale = DEFAULT_ELEVATION_SCALE,
+  moistureScale = DEFAULT_MOISTURE_SCALE,
+  elevationPersistence = DEFAULT_OCTAVE_WEIGHT,
+  moisturePersistence = DEFAULT_OCTAVE_WEIGHT,
 }) => {
   // Canvas and rendering references
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -94,20 +107,40 @@ const WorldMap: React.FC<WorldMapProps> = ({
     return calculateTerrainHeights(biomeWeights);
   }, [biomeWeights]);
 
-  // Create noise generator with specified seed
-  const noiseGeneratorRef = useRef<PerlinNoise>(
-    createNoiseGenerator(seed, noiseDetail, noiseFalloff)
+  // Create world generator with specified parameters
+  const worldGeneratorRef = useRef<WorldGenerator>(
+    new WorldGenerator({
+      seed,
+      elevationOctaves,
+      moistureOctaves,
+      elevationScale,
+      moistureScale,
+      elevationPersistence,
+      moisturePersistence,
+    })
   );
 
-  // When seed, detail or falloff changes, update the noise generator
+  // When generation parameters change, update the world generator
   useEffect(() => {
-    noiseGeneratorRef.current = createNoiseGenerator(
+    worldGeneratorRef.current.updateConfig({
       seed,
-      noiseDetail,
-      noiseFalloff
-    );
+      elevationOctaves,
+      moistureOctaves,
+      elevationScale,
+      moistureScale,
+      elevationPersistence,
+      moisturePersistence,
+    });
     setMapChanged(true);
-  }, [seed, noiseDetail, noiseFalloff]);
+  }, [
+    seed,
+    elevationOctaves,
+    moistureOctaves,
+    elevationScale,
+    moistureScale,
+    elevationPersistence,
+    moisturePersistence,
+  ]);
 
   // Re-render map when visualization mode or biome weights change
   useEffect(() => {
@@ -199,245 +232,119 @@ const WorldMap: React.FC<WorldMapProps> = ({
     return { startX, startY, endX, endY, skipFactor };
   };
 
-  // Animation loop for camera movement and rendering
+  // Main rendering loop - updates the canvas when needed
   useEffect(() => {
-    let animationFrameId: number;
-
-    const updateCamera = () => {
-      let changed = false;
-
-      // Calculate movement speed based on zoom level
-      // Slower movement when zoomed in, faster when zoomed out
-      const moveSpeed = CAMERA_SPEED / camera.zoom;
-
-      setCamera((prevCamera) => {
-        let newX = prevCamera.x;
-        let newY = prevCamera.y;
-
-        // Handle arrow key movement
-        if (keyStates.current.ArrowRight) {
-          newX = Math.min(WORLD_GRID_WIDTH - 1, newX + moveSpeed);
-          changed = true;
-        }
-
-        if (keyStates.current.ArrowLeft) {
-          newX = Math.max(0, newX - moveSpeed);
-          changed = true;
-        }
-
-        if (keyStates.current.ArrowUp) {
-          newY = Math.max(0, newY - moveSpeed);
-          changed = true;
-        }
-
-        if (keyStates.current.ArrowDown) {
-          newY = Math.min(WORLD_GRID_HEIGHT - 1, newY + moveSpeed);
-          changed = true;
-        }
-
-        // Only update if there was a change
-        if (changed) {
-          return { ...prevCamera, x: newX, y: newY };
-        }
-        return prevCamera;
-      });
-
-      if (changed) {
-        setMapChanged(true);
-      }
-
-      animationFrameId = requestAnimationFrame(updateCamera);
-    };
-
-    updateCamera();
-
-    return () => {
-      cancelAnimationFrame(animationFrameId);
-    };
-  }, [camera.zoom]);
-
-  // Handle mouse wheel for zooming
-  useEffect(() => {
-    const handleWheel = (e: WheelEvent) => {
-      e.preventDefault();
-
-      setCamera((prevCamera) => {
-        // Get mouse position relative to canvas
-        const rect = canvasRef.current?.getBoundingClientRect();
-        if (!rect) return prevCamera;
-
-        const mouseX = e.clientX - rect.left;
-        const mouseY = e.clientY - rect.top;
-
-        // Convert mouse position to world coordinates before zoom
-        const worldX =
-          prevCamera.x + (mouseX - width / 2) / (tileSize * prevCamera.zoom);
-        const worldY =
-          prevCamera.y + (mouseY - height / 2) / (tileSize * prevCamera.zoom);
-
-        // Calculate new zoom level
-        const zoomDelta = e.deltaY * -0.001;
-        const newZoom = Math.max(
-          MIN_ZOOM,
-          Math.min(MAX_ZOOM, prevCamera.zoom + zoomDelta * prevCamera.zoom)
-        );
-
-        // Calculate new camera position to zoom towards mouse position
-        // This creates the effect of zooming into where the mouse is pointing
-        let newX = worldX - (mouseX - width / 2) / (tileSize * newZoom);
-        let newY = worldY - (mouseY - height / 2) / (tileSize * newZoom);
-
-        // Clamp camera position to world boundaries
-        newX = Math.max(0, Math.min(WORLD_GRID_WIDTH - 1, newX));
-        newY = Math.max(0, Math.min(WORLD_GRID_HEIGHT - 1, newY));
-
-        // Only update if zoom actually changed
-        if (newZoom !== prevCamera.zoom) {
-          setMapChanged(true);
-          return { x: newX, y: newY, zoom: newZoom };
-        }
-
-        return prevCamera;
-      });
-    };
-
-    const canvas = canvasRef.current;
-    if (canvas) {
-      canvas.addEventListener("wheel", handleWheel);
-    }
-
-    return () => {
-      if (canvas) {
-        canvas.removeEventListener("wheel", handleWheel);
-      }
-    };
-  }, [width, height, tileSize]);
-
-  // Track mouse movement for debug info
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      const canvas = canvasRef.current;
-      if (canvas) {
-        const rect = canvas.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
-        setMousePos({ x, y });
-
-        // Set map changed to true to update debug info
-        // Only if debug mode is on to avoid unnecessary redraws
-        if (debug) {
-          setMapChanged(true);
-        }
-      }
-    };
-
-    const canvas = canvasRef.current;
-    if (canvas) {
-      canvas.addEventListener("mousemove", handleMouseMove);
-    }
-
-    return () => {
-      if (canvas) {
-        canvas.removeEventListener("mousemove", handleMouseMove);
-      }
-    };
-  }, [debug]);
-
-  // Get color based on the current visualization mode
-  const getVisualizationColor = (
-    noiseValue: number,
-    terrainType: TerrainType
-  ): RGB => {
-    switch (visualizationMode) {
-      case VisualizationMode.NOISE:
-        // Display raw noise values as grayscale
-        const val = Math.round(noiseValue * 255);
-        return { r: val, g: val, b: val };
-
-      case VisualizationMode.ELEVATION:
-        // Display elevation using a gradient from blue (low) to white (high)
-        return {
-          r: Math.round(40 + noiseValue * 215),
-          g: Math.round(80 + noiseValue * 175),
-          b: Math.round(120 + noiseValue * 135),
-        };
-
-      case VisualizationMode.WEIGHT_DISTRIBUTION:
-        // Show how weights affect terrain distribution
-        // Each terrain type gets a distinct color
-        const colors = [
-          { r: 30, g: 144, b: 255 }, // Ocean Deep: DodgerBlue
-          { r: 135, g: 206, b: 250 }, // Ocean Medium: LightSkyBlue
-          { r: 0, g: 255, b: 255 }, // Ocean Shallow: Cyan
-          { r: 255, g: 223, b: 0 }, // Beach: Gold
-          { r: 124, g: 252, b: 0 }, // Grass: LawnGreen
-          { r: 160, g: 82, b: 45 }, // Mountain: Sienna
-          { r: 255, g: 250, b: 250 }, // Snow: Snow
-        ];
-        return colors[terrainType];
-
-      case VisualizationMode.BIOME:
-      default:
-        // Default biome colors with interpolation
-        return getTerrainColor(noiseValue, terrainType);
-    }
-  };
-
-  // Main render function
-  useEffect(() => {
+    // Skip rendering if nothing changed
     if (!mapChanged) return;
 
     const canvas = canvasRef.current;
-    const offscreenCanvas = offscreenCanvasRef.current;
-
-    if (!canvas || !offscreenCanvas) return;
+    if (!canvas) return;
 
     const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const offscreenCanvas = offscreenCanvasRef.current;
+    if (!offscreenCanvas) return;
+
     const offCtx = offscreenCanvas.getContext("2d");
+    if (!offCtx) return;
 
-    if (!ctx || !offCtx) return;
+    // Update camera position based on keyboard input
+    const updateCamera = () => {
+      let newX = camera.x;
+      let newY = camera.y;
 
-    // Check if we're at a low zoom level where optimization is needed
+      // Determine camera movement speed based on zoom level
+      // Moving faster when zoomed out makes navigation more efficient
+      const speed = CAMERA_SPEED / camera.zoom;
+
+      // Apply movement based on which keys are pressed
+      if (keyStates.current.ArrowUp) newY -= speed;
+      if (keyStates.current.ArrowDown) newY += speed;
+      if (keyStates.current.ArrowLeft) newX -= speed;
+      if (keyStates.current.ArrowRight) newX += speed;
+
+      // Clamp camera position to world boundaries
+      newX = Math.max(0, Math.min(WORLD_GRID_WIDTH, newX));
+      newY = Math.max(0, Math.min(WORLD_GRID_HEIGHT, newY));
+
+      // Only update if position changed
+      if (newX !== camera.x || newY !== camera.y) {
+        setCamera((prevCamera) => ({ ...prevCamera, x: newX, y: newY }));
+        setMapChanged(true);
+      }
+    };
+
+    // Set up animation loop for smooth camera movement
+    const handleCameraMovement = () => {
+      updateCamera();
+      animationFrameRef.current = requestAnimationFrame(handleCameraMovement);
+    };
+
+    // Start animation loop and clean up on unmount
+    const animationFrameRef = { current: 0 };
+    animationFrameRef.current = requestAnimationFrame(handleCameraMovement);
+
+    // Handle mouse wheel for zooming
+    const handleWheel = (e: WheelEvent) => {
+      e.preventDefault();
+
+      // Calculate zoom factor based on wheel delta
+      const zoomFactor = 1 - Math.sign(e.deltaY) * 0.1;
+      let newZoom = camera.zoom * zoomFactor;
+
+      // Clamp zoom to defined min/max range
+      newZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, newZoom));
+
+      if (newZoom !== camera.zoom) {
+        setCamera((prevCamera) => ({ ...prevCamera, zoom: newZoom }));
+        setMapChanged(true);
+      }
+    };
+
+    // Add wheel event listener
+    canvas.addEventListener("wheel", handleWheel);
+
+    // Handle mouse movement for position tracking
+    const handleMouseMove = (e: MouseEvent) => {
+      const rect = canvas.getBoundingClientRect();
+      setMousePos({
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top,
+      });
+    };
+
+    // Add mouse move event listener
+    canvas.addEventListener("mousemove", handleMouseMove);
+
+    // Clear the canvas
+    offCtx.clearRect(0, 0, width, height);
+
+    // Calculate which grid cells are visible
     const isLowZoom = camera.zoom < LOW_ZOOM_THRESHOLD;
-
-    // Get current tile size based on zoom level
-    const currentTileSize = calculateTileSize(camera.zoom);
-
-    // Calculate visible grid cells with potential skip factor for low zoom
     const { startX, startY, endX, endY, skipFactor } = getVisibleGridCells(
       camera,
       camera.zoom,
       isLowZoom
     );
 
-    // Calculate pixel offset for rendering (to handle partial tiles)
+    // Calculate actual tile size with zoom
+    const currentTileSize = calculateTileSize(camera.zoom);
+
+    // Calculate camera offset in pixels
     const offsetX = (camera.x - startX) * currentTileSize;
     const offsetY = (camera.y - startY) * currentTileSize;
-
-    // Clear offscreen canvas
-    offCtx.clearRect(0, 0, width, height);
-
-    // Create a function to get noise value for a specific world position
-    const getNoise = (worldX: number, worldY: number) => {
-      // Scale coordinates to ensure landscape features have appropriate sizes
-      // Dividing by a larger number creates larger continents/islands
-      const noiseX = worldX / 100;
-      const noiseY = worldY / 100;
-      return noiseGeneratorRef.current.get(noiseX, noiseY);
-    };
 
     // Generate only the visible tiles (lazy loading)
     // We only generate tiles that are actually visible in the viewport
     for (let worldY = startY; worldY <= endY; worldY += skipFactor) {
       for (let worldX = startX; worldX <= endX; worldX += skipFactor) {
-        // Get the noise value for this world position
-        const noiseValue = getNoise(worldX, worldY);
-
-        // Determine terrain type based on noise value and terrain heights from weights
-        const terrainType = getTerrainTypeForHeight(noiseValue, terrainHeights);
-
-        // Get appropriate color based on visualization mode
-        const color = getVisualizationColor(noiseValue, terrainType);
+        // Get color for this tile based on visualization mode
+        const color = worldGeneratorRef.current.getColorForMode(
+          worldX,
+          worldY,
+          visualizationMode
+        );
 
         // Calculate screen position for this tile
         const screenX =
@@ -517,17 +424,21 @@ const WorldMap: React.FC<WorldMapProps> = ({
         tileY >= 0 &&
         tileY < WORLD_GRID_HEIGHT
       ) {
-        // Get the noise value for this tile
-        const noiseValue = getNoise(tileX, tileY);
-
-        // Get the terrain type
-        const terrainType = getTerrainTypeForHeight(noiseValue, terrainHeights);
+        // Get detailed debug info for this tile
+        const debugTileInfo = worldGeneratorRef.current.getDebugInfo(
+          tileX,
+          tileY
+        );
+        const { elevation, moisture } =
+          worldGeneratorRef.current.getElevationAndMoisture(tileX, tileY);
+        const biomeType = worldGeneratorRef.current.getBiome(tileX, tileY);
 
         // Update debug info
         setDebugInfo(
           `Tile: (${tileX}, ${tileY}) | ` +
-            `Noise: ${noiseValue.toFixed(3)} | ` +
-            `Terrain: ${TerrainType[terrainType]} | ` +
+            `Elev: ${elevation.toFixed(3)} | ` +
+            `Moist: ${moisture.toFixed(3)} | ` +
+            `Biome: ${BIOME_NAMES[biomeType]} | ` +
             `Zoom: ${camera.zoom.toFixed(2)} | ` +
             `View: ${isLowZoom ? "Low-res" : "Full-res"} | ` +
             `Skip: ${skipFactor} | ` +
@@ -536,7 +447,12 @@ const WorldMap: React.FC<WorldMapProps> = ({
       }
     }
 
-    setMapChanged(false);
+    // Clean up event listeners
+    return () => {
+      cancelAnimationFrame(animationFrameRef.current);
+      canvas.removeEventListener("wheel", handleWheel);
+      canvas.removeEventListener("mousemove", handleMouseMove);
+    };
   }, [
     mapChanged,
     width,
@@ -569,8 +485,13 @@ const WorldMap: React.FC<WorldMapProps> = ({
             background: "rgba(0, 0, 0, 0.7)",
             color: "white",
             padding: "5px",
-            fontFamily: "monospace",
+            borderRadius: "3px",
             fontSize: "12px",
+            fontFamily: "monospace",
+            maxWidth: "80%",
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis",
           }}
         >
           {debugInfo}
