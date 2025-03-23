@@ -1,0 +1,57 @@
+.worldMapContainer {
+  position: relative;
+  border: 1px solid #333;
+  overflow: hidden;
+  background-color: #0a1a2a;
+}
+
+.worldMapCanvas {
+  display: block;
+}
+
+.debugInfo {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: 5px;
+  font-family: monospace;
+  font-size: 12px;
+  border-radius: 4px;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.controls {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: 8px;
+  font-size: 12px;
+  border-radius: 4px;
+  z-index: 10;
+}
+
+.control {
+  margin-bottom: 5px;
+}
+
+.label {
+  display: block;
+  margin-bottom: 3px;
+}
+
+.infoOverlay {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: 8px;
+  font-size: 14px;
+  border-radius: 4px;
+  z-index: 10;
+}

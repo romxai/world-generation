@@ -6,8 +6,8 @@ export const WINDOW_HEIGHT = 720;
 export const DEFAULT_TILE_SIZE = 16; // Base tile size in pixels
 
 // World dimensions
-export const WORLD_GRID_WIDTH = 1000; // Fixed number of tiles in the world (x-axis)
-export const WORLD_GRID_HEIGHT = 1000; // Fixed number of tiles in the world (y-axis)
+export const WORLD_GRID_WIDTH = 100; // Fixed number of tiles in the world (x-axis)
+export const WORLD_GRID_HEIGHT = 100; // Fixed number of tiles in the world (y-axis)
 
 // Noise configuration
 export const DEFAULT_SEED = 42; // Default seed for reproducible generation
@@ -22,7 +22,7 @@ export const INITIAL_OFFSET_Y = WORLD_GRID_HEIGHT / 2; // Initial camera positio
 
 // Performance settings
 export const LOW_ZOOM_THRESHOLD = 0.5; // Threshold for low zoom performance optimizations
-export const LOW_ZOOM_TILE_FACTOR = 4; // Factor to reduce tile count when zoomed out
+export const LOW_ZOOM_TILE_FACTOR = 6; // Factor to reduce tile count when zoomed out
 
 // Terrain type identifiers
 export enum TerrainType {
@@ -33,6 +33,17 @@ export enum TerrainType {
   GRASS = 4,
   MOUNTAIN = 5,
   SNOW = 6,
+}
+
+// BiomeWeights interface for configuring terrain distribution
+export interface BiomeWeights {
+  ocean?: number; // Combined weight for all ocean types
+  beach?: number; // Weight for beach terrain
+  plains?: number; // Weight for grass/plains terrain
+  forest?: number; // Weight for forest terrain (not yet implemented)
+  hills?: number; // Weight for hills terrain (not yet implemented)
+  mountains?: number; // Weight for mountain terrain
+  snow?: number; // Weight for snow terrain
 }
 
 // Biome weight presets - These determine the relative distribution of terrain types
@@ -157,12 +168,7 @@ export const TERRAIN_NAMES = {
 };
 
 // Visualization modes for the map
-export enum VisualizationMode {
-  BIOME = "biome", // Normal colored biome view
-  NOISE = "noise", // Raw Perlin noise values as grayscale
-  ELEVATION = "elevation", // Elevation using a height gradient
-  WEIGHT_DISTRIBUTION = "weight", // Shows how weights affect terrain distribution
-}
+export type VisualizationMode = "terrain" | "elevation" | "noise" | "weight";
 
 // Tile grid constants
 export const GRID_WIDTH =

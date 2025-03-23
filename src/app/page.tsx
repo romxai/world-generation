@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import WorldMap from "./components/WorldGenerator/WorldMap";
+import PolygonMap from "./components/WorldGenerator/PolygonMap";
 import {
   DEFAULT_SEED,
   WINDOW_WIDTH,
@@ -11,13 +11,21 @@ import {
   WORLD_GRID_HEIGHT,
   BIOME_PRESETS,
   TerrainType,
-  VisualizationMode,
   TERRAIN_NAMES,
   NOISE_DETAIL,
   NOISE_FALLOFF,
   calculateTerrainHeights,
   ALL_TERRAIN_TYPES,
+  BiomeWeights,
 } from "./components/WorldGenerator/config";
+import {
+  DEFAULT_POLYGON_COUNT,
+  DEFAULT_RELAXATION_STEPS,
+  ADAPTIVE_POLYGON_SETTINGS,
+} from "./components/WorldGenerator/polygonConfig";
+
+// Import VisualizationMode type from the file where it's defined
+import type { VisualizationMode } from "./components/WorldGenerator/config";
 
 export default function Home() {
   // Basic settings
@@ -26,9 +34,9 @@ export default function Home() {
   const [tileSize, setTileSize] = useState(DEFAULT_TILE_SIZE);
 
   // Visualization and biome settings
-  const [visualizationMode, setVisualizationMode] = useState<VisualizationMode>(
-    VisualizationMode.BIOME
-  );
+  const [visualizationMode, setVisualizationMode] = useState<
+    VisualizationMode
+  >("terrain");
   const [biomePreset, setBiomePreset] = useState<string>("CONTINENTS");
   const [biomeWeights, setBiomeWeights] = useState<number[]>(
     BIOME_PRESETS.CONTINENTS
@@ -119,6 +127,7 @@ export default function Home() {
             </div>
 
             {/* Visualization mode */}
+            {/*
             <div className="bg-gray-700 p-3 rounded-md">
               <h3 className="font-medium mb-2">Visualization</h3>
               <select
@@ -332,7 +341,7 @@ export default function Home() {
           wheel to zoom
         </div>
 
-        <WorldMap
+        <PolygonMap
           width={WINDOW_WIDTH}
           height={WINDOW_HEIGHT}
           seed={seed}
@@ -341,7 +350,7 @@ export default function Home() {
           biomeWeights={biomeWeights}
           noiseDetail={noiseDetail}
           noiseFalloff={noiseFalloff}
-          visualizationMode={visualizationMode}
+          visualizationMode={visualizationMode as "terrain"}
         />
       </div>
 
@@ -349,9 +358,9 @@ export default function Home() {
         <p>
           This world is divided into a fixed {WORLD_GRID_WIDTH}x
           {WORLD_GRID_HEIGHT} grid of purchasable tiles. The map is generated
-          using Perlin noise to create natural-looking terrain with islands and
-          continents. Tiles are only rendered when they are visible in the
-          viewport for better performance.
+          using Voronoi polygons with Lloyd relaxation to create natural-looking
+          terrain with smoother coastlines and more organic shapes. A grid
+          overlay is shown for reference to the fixed grid of tiles.
         </p>
       </div>
     </div>
