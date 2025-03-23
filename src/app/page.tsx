@@ -1,103 +1,99 @@
-import Image from "next/image";
+"use client";
+
+import React, { useState } from "react";
+import WorldMap from "./components/WorldGenerator/WorldMap";
+import {
+  DEFAULT_SEED,
+  WINDOW_WIDTH,
+  WINDOW_HEIGHT,
+  DEFAULT_TILE_SIZE,
+  WORLD_GRID_WIDTH,
+  WORLD_GRID_HEIGHT,
+} from "./components/WorldGenerator/config";
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const [seed, setSeed] = useState(DEFAULT_SEED);
+  const [debug, setDebug] = useState(true);
+  const [tileSize, setTileSize] = useState(DEFAULT_TILE_SIZE);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  const generateNewSeed = () => {
+    setSeed(Math.floor(Math.random() * 10000));
+  };
+
+  return (
+    <div className="min-h-screen p-4 flex flex-col items-center bg-gray-900 text-white">
+      <h1 className="text-3xl font-bold mb-2">Procedural World Generator</h1>
+
+      <div className="mb-4 flex flex-wrap gap-4 items-center justify-center">
+        <div className="flex items-center gap-2">
+          <label htmlFor="seed">Seed:</label>
+          <input
+            id="seed"
+            type="number"
+            value={seed}
+            onChange={(e) => setSeed(Number(e.target.value))}
+            className="bg-gray-800 px-2 py-1 rounded w-24 text-white"
+          />
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
+
+        <button
+          onClick={generateNewSeed}
+          className="bg-blue-600 px-4 py-1 rounded hover:bg-blue-700"
         >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
+          Random Seed
+        </button>
+
+        <div className="flex items-center gap-2">
+          <label htmlFor="tileSize">Base Tile Size:</label>
+          <select
+            id="tileSize"
+            value={tileSize}
+            onChange={(e) => setTileSize(Number(e.target.value))}
+            className="bg-gray-800 px-2 py-1 rounded text-white"
+          >
+            <option value="8">8px</option>
+            <option value="16">16px</option>
+            <option value="32">32px</option>
+            <option value="64">64px</option>
+          </select>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <label htmlFor="debug">Debug Mode:</label>
+          <input
+            id="debug"
+            type="checkbox"
+            checked={debug}
+            onChange={(e) => setDebug(e.target.checked)}
+            className="bg-gray-800 rounded"
           />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+        </div>
+      </div>
+
+      <div className="mb-2">
+        <div className="text-sm text-gray-400 mb-2 text-center">
+          <strong>Controls:</strong> Use arrow keys to navigate the map, mouse
+          wheel to zoom
+        </div>
+
+        <WorldMap
+          width={WINDOW_WIDTH}
+          height={WINDOW_HEIGHT}
+          seed={seed}
+          debug={debug}
+          tileSize={tileSize}
+        />
+      </div>
+
+      <div className="mt-2 text-sm text-gray-400 max-w-3xl text-center">
+        <p>
+          This world is divided into a fixed {WORLD_GRID_WIDTH}x
+          {WORLD_GRID_HEIGHT} grid of purchasable tiles. The map is generated
+          using Perlin noise to create natural-looking terrain with islands and
+          continents. Tiles are only rendered when they are visible in the
+          viewport for better performance.
+        </p>
+      </div>
     </div>
   );
 }
