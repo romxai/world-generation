@@ -157,6 +157,9 @@ export default function Home() {
                 <option value={VisualizationMode.NOISE}>Raw Noise</option>
                 <option value={VisualizationMode.ELEVATION}>Elevation</option>
                 <option value={VisualizationMode.MOISTURE}>Moisture</option>
+                <option value={VisualizationMode.TEMPERATURE}>
+                  Temperature
+                </option>
                 <option value={VisualizationMode.WEIGHT_DISTRIBUTION}>
                   Weight Distribution
                 </option>

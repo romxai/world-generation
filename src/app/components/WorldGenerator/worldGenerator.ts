@@ -1,7 +1,7 @@
 /**
  * worldGenerator.ts
  *
- * Core world generation logic that combines elevation and moisture
+ * Core world generation logic that combines elevation, moisture, and temperature
  * noise to produce a complete world map with various biomes.
  */
 
@@ -19,6 +19,11 @@ import {
   getMoistureColor,
 } from "./biomeMapper";
 import { getTerrainTypeForHeight, getTerrainColor } from "./terrainUtils";
+import {
+  calculateTemperature,
+  getTemperatureColor,
+  TemperatureParams,
+} from "./temperatureMapper";
 
 /**
  * Interface for tile data in the world
@@ -28,6 +33,7 @@ export interface WorldTile {
   y: number;
   elevation: number;
   moisture: number;
+  temperature: number;
   biomeType: BiomeType;
   color: RGB;
 }
@@ -43,6 +49,7 @@ export interface WorldGeneratorConfig {
   moistureScale: number;
   elevationPersistence: number;
   moisturePersistence: number;
+  temperatureParams: TemperatureParams;
 }
 
 /**
@@ -142,12 +149,29 @@ export class WorldGenerator {
   }
 
   /**
-   * Get both elevation and moisture values at once
+   * Get temperature value at the specified world coordinates
    */
-  getElevationAndMoisture(x: number, y: number): ElevationMoistureData {
+  getTemperature(x: number, y: number, elevation: number): number {
+    return calculateTemperature(x, y, elevation, this.config.temperatureParams);
+  }
+
+  /**
+   * Get comprehensive biome data at the specified coordinates
+   */
+  getBiomeData(x: number, y: number): BiomeData {
+    // Get base elevation and moisture values
+    const elevation = this.getElevation(x, y);
+    const moisture = this.getMoisture(x, y);
+
+    // Calculate temperature based on elevation and latitude
+    const temperature = this.getTemperature(x, y, elevation);
+
     return {
-      elevation: this.getElevation(x, y),
-      moisture: this.getMoisture(x, y),
+      x,
+      y,
+      elevation,
+      moisture,
+      temperature,
     };
   }
 
@@ -155,19 +179,19 @@ export class WorldGenerator {
    * Get biome type at the specified world coordinates
    */
   getBiome(x: number, y: number): BiomeType {
-    const { elevation, moisture } = this.getElevationAndMoisture(x, y);
-    return getBiomeType(elevation, moisture);
+    const biomeData = this.getBiomeData(x, y);
+    return getBiomeType(biomeData);
   }
 
   /**
    * Get full tile data for a specific location
    */
   getTile(x: number, y: number): WorldTile {
-    // Get base elevation and moisture values
-    const { elevation, moisture } = this.getElevationAndMoisture(x, y);
+    // Get all biome data
+    const biomeData = this.getBiomeData(x, y);
 
-    // Determine biome based on elevation and moisture
-    const biomeType = getBiomeType(elevation, moisture);
+    // Determine biome based on data
+    const biomeType = getBiomeType(biomeData);
 
     // Get appropriate color for this biome
     const color = getBiomeColor(biomeType);
@@ -175,8 +199,9 @@ export class WorldGenerator {
     return {
       x,
       y,
-      elevation,
-      moisture,
+      elevation: biomeData.elevation,
+      moisture: biomeData.moisture,
+      temperature: biomeData.temperature,
       biomeType,
       color,
     };
@@ -186,33 +211,37 @@ export class WorldGenerator {
    * Get a color for the specified location based on visualization mode
    */
   getColorForMode(x: number, y: number, mode: VisualizationMode): RGB {
-    // Get raw elevation and moisture data
-    const { elevation, moisture } = this.getElevationAndMoisture(x, y);
+    // Get biome data
+    const biomeData = this.getBiomeData(x, y);
 
     // Return appropriate color based on visualization mode
     switch (mode) {
       case VisualizationMode.NOISE:
         // Return grayscale based on elevation
-        const value = Math.floor(elevation * 255);
+        const value = Math.floor(biomeData.elevation * 255);
         return { r: value, g: value, b: value };
 
       case VisualizationMode.ELEVATION:
         // Return elevation-based color gradient
-        return getElevationColor(elevation);
+        return getElevationColor(biomeData.elevation);
 
       case VisualizationMode.MOISTURE:
         // Return moisture-based color gradient
-        return getMoistureColor(moisture);
+        return getMoistureColor(biomeData.moisture);
+
+      case VisualizationMode.TEMPERATURE:
+        // Return temperature-based color gradient
+        return getTemperatureColor(biomeData.temperature);
 
       case VisualizationMode.WEIGHT_DISTRIBUTION:
         // For backward compatibility, show terrain distribution
-        const terrainType = getTerrainTypeForHeight(elevation);
-        return getTerrainColor(elevation, terrainType);
+        const terrainType = getTerrainTypeForHeight(biomeData.elevation);
+        return getTerrainColor(biomeData.elevation, terrainType);
 
       case VisualizationMode.BIOME:
       default:
         // Return biome color (default mode)
-        const biomeType = getBiomeType(elevation, moisture);
+        const biomeType = getBiomeType(biomeData);
         return getBiomeColor(biomeType);
     }
   }
@@ -221,13 +250,14 @@ export class WorldGenerator {
    * Generate debug information for a specific location
    */
   getDebugInfo(x: number, y: number): string {
-    const { elevation, moisture } = this.getElevationAndMoisture(x, y);
-    const biomeType = getBiomeType(elevation, moisture);
+    const biomeData = this.getBiomeData(x, y);
+    const biomeType = getBiomeType(biomeData);
 
     return (
       `Tile(${x},${y}) - ` +
-      `Elevation: ${elevation.toFixed(3)} - ` +
-      `Moisture: ${moisture.toFixed(3)} - ` +
+      `Elev: ${biomeData.elevation.toFixed(3)} - ` +
+      `Moist: ${biomeData.moisture.toFixed(3)} - ` +
+      `Temp: ${biomeData.temperature.toFixed(3)} - ` +
       `Biome: ${BiomeType[biomeType]}`
     );
   }

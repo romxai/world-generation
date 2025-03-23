@@ -15,8 +15,13 @@ export const NOISE_DETAIL = 9; // Detail level for noise generation
 export const NOISE_FALLOFF = 0.2; // Falloff rate for noise
 export const DEFAULT_OCTAVES = 4; // Default number of octaves for noise
 export const DEFAULT_OCTAVE_WEIGHT = 0.5; // Default weight for each octave
-export const DEFAULT_MOISTURE_SCALE = 200; // Default scale for moisture noise (higher = larger features)
-export const DEFAULT_ELEVATION_SCALE = 150; // Default scale for elevation noise (higher = larger features)
+export const DEFAULT_MOISTURE_SCALE = 150; // Default scale for moisture noise (higher = larger features)
+export const DEFAULT_ELEVATION_SCALE = 100; // Default scale for elevation noise (higher = larger features)
+
+// Temperature & climate settings
+export const DEFAULT_EQUATOR_POSITION = 0.5; // Where the equator is located (0-1)
+export const DEFAULT_TEMPERATURE_VARIANCE = 0.2; // Random variation in temperature
+export const DEFAULT_ELEVATION_TEMP_EFFECT = 0.3; // How much elevation cools temperature
 
 // Camera and zoom settings
 export const INITIAL_ZOOM = 1.0; // Starting zoom level (1.0 = 100%)
@@ -79,14 +84,17 @@ export enum BiomeType {
 // Biome weight presets - These determine the relative distribution of terrain types
 // Higher weight means more of that terrain type will appear in the world
 export const BIOME_PRESETS = {
-  // Islands preset - Mostly ocean with some small islands
-  ISLANDS: [70, 20, 20, 12, 35, 30, 0], // Matches WEIGHTS1 from Python reference
-  // Continents preset - More balanced with larger landmasses
-  CONTINENTS: [35, 20, 20, 15, 30, 30, 25], // Matches WEIGHTS2 from Python reference
-  // Lakes preset - Mostly land with some lakes/ocean areas
-  LAKES: [20, 15, 15, 15, 50, 35, 45], // Matches WEIGHTS3 from Python reference
-  // Custom preset - User defined
-  CUSTOM: [35, 20, 20, 15, 30, 30, 25],
+  // WORLD preset - Realistic Earth-like world with large continents and oceans
+  WORLD: [60, 15, 15, 10, 35, 25, 20],
+
+  // CONTINENTS preset - Mostly land with large continents and less water
+  CONTINENTS: [25, 15, 15, 10, 45, 40, 35],
+
+  // ISLANDS preset - Scattered small islands across ocean
+  ISLANDS: [70, 20, 20, 15, 25, 20, 15],
+
+  // Custom preset - User defined, initially same as CONTINENTS
+  CUSTOM: [25, 15, 15, 10, 45, 40, 35],
 };
 
 // Terrain height thresholds (noise values) - these will be dynamically calculated from weights
@@ -108,6 +116,17 @@ export const MOISTURE_THRESHOLDS = {
   MEDIUM: 0.6,
   WET: 0.8,
   VERY_WET: 1.0,
+};
+
+// Temperature thresholds for biome determination
+export const TEMPERATURE_THRESHOLDS = {
+  FREEZING: 0.15,
+  COLD: 0.3,
+  COOL: 0.45,
+  MILD: 0.6,
+  WARM: 0.75,
+  HOT: 0.9,
+  SCORCHING: 1.0,
 };
 
 // Function to calculate height thresholds based on weights
@@ -269,6 +288,7 @@ export enum VisualizationMode {
   NOISE = "noise", // Raw Perlin noise values as grayscale
   ELEVATION = "elevation", // Elevation using a height gradient
   MOISTURE = "moisture", // Moisture using a blue gradient
+  TEMPERATURE = "temperature", // Temperature using a temperature gradient
   WEIGHT_DISTRIBUTION = "weight", // Shows how weights affect terrain distribution
 }
 

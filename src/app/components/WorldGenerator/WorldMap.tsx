@@ -34,6 +34,9 @@ import {
   DEFAULT_OCTAVE_WEIGHT,
   BiomeType,
   BIOME_NAMES,
+  DEFAULT_EQUATOR_POSITION,
+  DEFAULT_TEMPERATURE_VARIANCE,
+  DEFAULT_ELEVATION_TEMP_EFFECT,
 } from "./config";
 import { PerlinNoise, createNoiseGenerator } from "./noiseGenerator";
 import { WorldGenerator, WorldGeneratorConfig } from "./worldGenerator";
@@ -101,6 +104,21 @@ const WorldMap: React.FC<WorldMapProps> = ({
     y: 0,
   });
 
+  // Temperature parameters state
+  const [equatorPosition, setEquatorPosition] = useState(
+    DEFAULT_EQUATOR_POSITION
+  );
+  const [temperatureVariance, setTemperatureVariance] = useState(
+    DEFAULT_TEMPERATURE_VARIANCE
+  );
+  const [elevationTempEffect, setElevationTempEffect] = useState(
+    DEFAULT_ELEVATION_TEMP_EFFECT
+  );
+
+  // Visualization state
+  const [currentVisualizationMode, setVisualizationMode] =
+    useState<string>(visualizationMode);
+
   // Cache the terrain heights calculated from weights
   // This improves performance by not recalculating on every render
   const terrainHeights = useMemo(() => {
@@ -117,6 +135,13 @@ const WorldMap: React.FC<WorldMapProps> = ({
       moistureScale,
       elevationPersistence,
       moisturePersistence,
+      temperatureParams: {
+        equatorPosition,
+        temperatureVariance,
+        elevationEffect: elevationTempEffect,
+        polarTemperature: 0.0,
+        equatorTemperature: 1.0,
+      },
     })
   );
 
@@ -130,6 +155,13 @@ const WorldMap: React.FC<WorldMapProps> = ({
       moistureScale,
       elevationPersistence,
       moisturePersistence,
+      temperatureParams: {
+        equatorPosition,
+        temperatureVariance,
+        elevationEffect: elevationTempEffect,
+        polarTemperature: 0.0,
+        equatorTemperature: 1.0,
+      },
     });
     setMapChanged(true);
   }, [
@@ -140,11 +172,15 @@ const WorldMap: React.FC<WorldMapProps> = ({
     moistureScale,
     elevationPersistence,
     moisturePersistence,
+    equatorPosition,
+    temperatureVariance,
+    elevationTempEffect,
   ]);
 
   // Re-render map when visualization mode or biome weights change
   useEffect(() => {
     setMapChanged(true);
+    setVisualizationMode(visualizationMode);
   }, [visualizationMode, biomeWeights]);
 
   // Key states for camera movement
@@ -343,7 +379,7 @@ const WorldMap: React.FC<WorldMapProps> = ({
         const color = worldGeneratorRef.current.getColorForMode(
           worldX,
           worldY,
-          visualizationMode
+          currentVisualizationMode as VisualizationMode
         );
 
         // Calculate screen position for this tile
@@ -391,11 +427,11 @@ const WorldMap: React.FC<WorldMapProps> = ({
     }
 
     // Additional visualization mode overlay indicators
-    if (visualizationMode !== VisualizationMode.BIOME) {
+    if (currentVisualizationMode !== VisualizationMode.BIOME) {
       offCtx.fillStyle = "rgba(0, 0, 0, 0.7)";
       offCtx.font = "14px Arial";
       offCtx.fillText(
-        `Visualization Mode: ${visualizationMode.toUpperCase()}`,
+        `Visualization Mode: ${currentVisualizationMode.toUpperCase()}`,
         10,
         30
       );
@@ -429,15 +465,15 @@ const WorldMap: React.FC<WorldMapProps> = ({
           tileX,
           tileY
         );
-        const { elevation, moisture } =
-          worldGeneratorRef.current.getElevationAndMoisture(tileX, tileY);
+        const biomeData = worldGeneratorRef.current.getBiomeData(tileX, tileY);
         const biomeType = worldGeneratorRef.current.getBiome(tileX, tileY);
 
         // Update debug info
         setDebugInfo(
           `Tile: (${tileX}, ${tileY}) | ` +
-            `Elev: ${elevation.toFixed(3)} | ` +
-            `Moist: ${moisture.toFixed(3)} | ` +
+            `Elev: ${biomeData.elevation.toFixed(3)} | ` +
+            `Moist: ${biomeData.moisture.toFixed(3)} | ` +
+            `Temp: ${biomeData.temperature.toFixed(3)} | ` +
             `Biome: ${BIOME_NAMES[biomeType]} | ` +
             `Zoom: ${camera.zoom.toFixed(2)} | ` +
             `View: ${isLowZoom ? "Low-res" : "Full-res"} | ` +
@@ -461,7 +497,7 @@ const WorldMap: React.FC<WorldMapProps> = ({
     camera,
     debug,
     mousePos,
-    visualizationMode,
+    currentVisualizationMode,
     terrainHeights,
   ]);
 
@@ -497,6 +533,105 @@ const WorldMap: React.FC<WorldMapProps> = ({
           {debugInfo}
         </div>
       )}
+
+      <div
+        className="controls"
+        style={{
+          position: "absolute",
+          top: "10px",
+          right: "10px",
+          background: "rgba(0, 0, 0, 0.7)",
+          color: "white",
+          padding: "10px",
+          borderRadius: "5px",
+          width: "250px",
+        }}
+      >
+        <h4 style={{ margin: "0 0 10px 0" }}>Temperature Controls</h4>
+
+        <div style={{ marginBottom: "10px" }}>
+          <label
+            htmlFor="equatorPosition"
+            style={{ display: "block", marginBottom: "5px" }}
+          >
+            Equator Position: {equatorPosition.toFixed(2)}
+          </label>
+          <input
+            id="equatorPosition"
+            type="range"
+            min="0"
+            max="1"
+            step="0.01"
+            value={equatorPosition}
+            onChange={(e) => setEquatorPosition(parseFloat(e.target.value))}
+            style={{ width: "100%" }}
+          />
+        </div>
+
+        <div style={{ marginBottom: "10px" }}>
+          <label
+            htmlFor="temperatureVariance"
+            style={{ display: "block", marginBottom: "5px" }}
+          >
+            Temperature Variance: {temperatureVariance.toFixed(2)}
+          </label>
+          <input
+            id="temperatureVariance"
+            type="range"
+            min="0"
+            max="0.5"
+            step="0.01"
+            value={temperatureVariance}
+            onChange={(e) => setTemperatureVariance(parseFloat(e.target.value))}
+            style={{ width: "100%" }}
+          />
+        </div>
+
+        <div style={{ marginBottom: "10px" }}>
+          <label
+            htmlFor="elevationTempEffect"
+            style={{ display: "block", marginBottom: "5px" }}
+          >
+            Elevation Effect: {elevationTempEffect.toFixed(2)}
+          </label>
+          <input
+            id="elevationTempEffect"
+            type="range"
+            min="0"
+            max="1"
+            step="0.01"
+            value={elevationTempEffect}
+            onChange={(e) => setElevationTempEffect(parseFloat(e.target.value))}
+            style={{ width: "100%" }}
+          />
+        </div>
+
+        <div>
+          <label
+            htmlFor="visualizationMode"
+            style={{ display: "block", marginBottom: "5px" }}
+          >
+            Visualization Mode:
+          </label>
+          <select
+            id="visualizationMode"
+            value={currentVisualizationMode}
+            onChange={(e) =>
+              setVisualizationMode(e.target.value as VisualizationMode)
+            }
+            style={{ width: "100%", padding: "5px" }}
+          >
+            <option value={VisualizationMode.BIOME}>Biome</option>
+            <option value={VisualizationMode.NOISE}>Raw Noise</option>
+            <option value={VisualizationMode.ELEVATION}>Elevation</option>
+            <option value={VisualizationMode.MOISTURE}>Moisture</option>
+            <option value={VisualizationMode.TEMPERATURE}>Temperature</option>
+            <option value={VisualizationMode.WEIGHT_DISTRIBUTION}>
+              Terrain Distribution
+            </option>
+          </select>
+        </div>
+      </div>
     </div>
   );
 };

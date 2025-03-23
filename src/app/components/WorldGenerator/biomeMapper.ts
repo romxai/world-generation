@@ -1,13 +1,19 @@
 /**
  * biomeMapper.ts
  *
- * This module contains functionality for mapping elevation and moisture values
+ * This module contains functionality for mapping elevation, moisture, and temperature values
  * to specific biomes, creating a realistic world with diverse terrain types.
  * Loosely based on the Whittaker diagram which classifies biomes based on
- * temperature (approximated by elevation) and precipitation (moisture).
+ * temperature and precipitation (moisture).
  */
 
-import { BiomeType, BIOME_COLORS, MOISTURE_THRESHOLDS, RGB } from "./config";
+import {
+  BiomeType,
+  BIOME_COLORS,
+  MOISTURE_THRESHOLDS,
+  RGB,
+  TEMPERATURE_THRESHOLDS,
+} from "./config";
 
 /**
  * Range of values defining elevation bands
@@ -24,11 +30,14 @@ export const ELEVATION_BANDS = {
 };
 
 /**
- * Interface to store both elevation and moisture values
+ * Interface to store elevation, moisture, and temperature data
  */
-export interface ElevationMoistureData {
+export interface BiomeData {
   elevation: number;
   moisture: number;
+  temperature: number;
+  x: number;
+  y: number;
 }
 
 /**
@@ -39,15 +48,16 @@ export function getBiomeColor(biome: BiomeType): RGB {
 }
 
 /**
- * Determine the biome type based on elevation and moisture values
+ * Determine the biome type based on elevation, moisture, and temperature values
  * This uses a modified Whittaker biome classification approach
  *
- * @param elevation Normalized elevation value (0-1)
- * @param moisture Normalized moisture value (0-1)
+ * @param data Object containing elevation, moisture, and temperature values
  * @returns The appropriate biome type for this location
  */
-export function getBiomeType(elevation: number, moisture: number): BiomeType {
-  // Deep water biomes - only affected by elevation, not moisture
+export function getBiomeType(data: BiomeData): BiomeType {
+  const { elevation, moisture, temperature } = data;
+
+  // Deep water biomes - only affected by elevation, not moisture or temperature
   if (elevation < ELEVATION_BANDS.WATER_DEEP) {
     return BiomeType.OCEAN_DEEP;
   }
@@ -62,63 +72,105 @@ export function getBiomeType(elevation: number, moisture: number): BiomeType {
     return BiomeType.OCEAN_SHALLOW;
   }
 
-  // Shore biomes - slightly affected by moisture
+  // Shore biomes - affected by temperature and moisture
   if (elevation < ELEVATION_BANDS.SHORE) {
-    return moisture < MOISTURE_THRESHOLDS.MEDIUM
-      ? BiomeType.BEACH
-      : BiomeType.ROCKY_SHORE;
+    // Rocky shores more common in colder areas, sandy beaches in warmer areas
+    return temperature < TEMPERATURE_THRESHOLDS.MILD ||
+      moisture > MOISTURE_THRESHOLDS.WET
+      ? BiomeType.ROCKY_SHORE
+      : BiomeType.BEACH;
   }
 
-  // Low elevation biomes - highly affected by moisture
+  // Low elevation biomes - highly affected by moisture and temperature
   if (elevation < ELEVATION_BANDS.LOW) {
-    if (moisture < MOISTURE_THRESHOLDS.VERY_DRY) {
-      return BiomeType.SUBTROPICAL_DESERT;
-    } else if (moisture < MOISTURE_THRESHOLDS.DRY) {
-      return BiomeType.TEMPERATE_DESERT;
-    } else if (moisture < MOISTURE_THRESHOLDS.MEDIUM) {
-      return BiomeType.GRASSLAND;
-    } else if (moisture < MOISTURE_THRESHOLDS.WET) {
-      return BiomeType.TROPICAL_SEASONAL_FOREST;
+    if (temperature > TEMPERATURE_THRESHOLDS.WARM) {
+      // Hot areas
+      if (moisture < MOISTURE_THRESHOLDS.DRY) {
+        return BiomeType.SUBTROPICAL_DESERT;
+      } else if (moisture < MOISTURE_THRESHOLDS.WET) {
+        return BiomeType.TROPICAL_SEASONAL_FOREST;
+      } else {
+        return BiomeType.TROPICAL_RAINFOREST;
+      }
+    } else if (temperature > TEMPERATURE_THRESHOLDS.COOL) {
+      // Mild areas
+      if (moisture < MOISTURE_THRESHOLDS.DRY) {
+        return BiomeType.TEMPERATE_DESERT;
+      } else if (moisture < MOISTURE_THRESHOLDS.WET) {
+        return BiomeType.GRASSLAND;
+      } else {
+        return BiomeType.TEMPERATE_DECIDUOUS_FOREST;
+      }
     } else {
-      return BiomeType.TROPICAL_RAINFOREST;
+      // Cool/cold areas
+      if (moisture < MOISTURE_THRESHOLDS.MEDIUM) {
+        return BiomeType.SHRUBLAND;
+      } else if (moisture < MOISTURE_THRESHOLDS.WET) {
+        return BiomeType.TAIGA;
+      } else {
+        return BiomeType.TUNDRA;
+      }
     }
   }
 
   // Medium elevation biomes
   if (elevation < ELEVATION_BANDS.MEDIUM) {
-    if (moisture < MOISTURE_THRESHOLDS.VERY_DRY) {
-      return BiomeType.TEMPERATE_DESERT;
-    } else if (moisture < MOISTURE_THRESHOLDS.DRY) {
-      return BiomeType.SHRUBLAND;
-    } else if (moisture < MOISTURE_THRESHOLDS.MEDIUM) {
-      return BiomeType.TEMPERATE_GRASSLAND;
+    if (temperature > TEMPERATURE_THRESHOLDS.MILD) {
+      // Warmer areas
+      if (moisture < MOISTURE_THRESHOLDS.MEDIUM) {
+        return BiomeType.TEMPERATE_DESERT;
+      } else {
+        return BiomeType.TEMPERATE_GRASSLAND;
+      }
     } else {
-      return BiomeType.TEMPERATE_DECIDUOUS_FOREST;
+      // Cooler areas
+      if (moisture < MOISTURE_THRESHOLDS.MEDIUM) {
+        return BiomeType.SHRUBLAND;
+      } else if (moisture < MOISTURE_THRESHOLDS.WET) {
+        return BiomeType.TAIGA;
+      } else {
+        return temperature < TEMPERATURE_THRESHOLDS.COLD
+          ? BiomeType.TUNDRA
+          : BiomeType.TEMPERATE_DECIDUOUS_FOREST;
+      }
     }
   }
 
-  // High elevation biomes
+  // High elevation biomes - less affected by moisture, more by temperature
   if (elevation < ELEVATION_BANDS.HIGH) {
-    if (moisture < MOISTURE_THRESHOLDS.DRY) {
-      return BiomeType.SHRUBLAND;
-    } else if (moisture < MOISTURE_THRESHOLDS.WET) {
-      return BiomeType.TAIGA;
+    if (temperature < TEMPERATURE_THRESHOLDS.COOL) {
+      // Cold areas get tundra or snow
+      return moisture < MOISTURE_THRESHOLDS.WET
+        ? BiomeType.TUNDRA
+        : BiomeType.SNOW;
     } else {
-      return BiomeType.TUNDRA;
+      // Warmer areas get shrubland or taiga
+      return moisture < MOISTURE_THRESHOLDS.MEDIUM
+        ? BiomeType.SHRUBLAND
+        : BiomeType.TAIGA;
     }
   }
 
-  // Very high elevation biomes
+  // Very high elevation biomes - mostly affected by temperature
   if (elevation < ELEVATION_BANDS.VERY_HIGH) {
-    if (moisture < MOISTURE_THRESHOLDS.MEDIUM) {
+    if (temperature < TEMPERATURE_THRESHOLDS.COLD) {
+      // Very cold high areas get snow
+      return BiomeType.SNOW;
+    } else if (moisture < MOISTURE_THRESHOLDS.MEDIUM) {
       return BiomeType.BARE;
     } else {
       return BiomeType.SCORCHED;
     }
   }
 
-  // Highest elevations are always snow
-  return BiomeType.SNOW;
+  // Highest elevations - mostly snow, but can be bare or scorched in warmer areas
+  if (temperature < TEMPERATURE_THRESHOLDS.COOL) {
+    return BiomeType.SNOW;
+  } else if (moisture < MOISTURE_THRESHOLDS.MEDIUM) {
+    return BiomeType.BARE;
+  } else {
+    return BiomeType.SCORCHED;
+  }
 }
 
 /**
