@@ -37,10 +37,11 @@ import {
   DEFAULT_EQUATOR_POSITION,
   DEFAULT_TEMPERATURE_VARIANCE,
   DEFAULT_ELEVATION_TEMP_EFFECT,
+  RGB,
 } from "./config";
 import { PerlinNoise, createNoiseGenerator } from "./noiseGenerator";
 import { WorldGenerator, WorldGeneratorConfig } from "./worldGenerator";
-import { RGB, rgbToString } from "./terrainUtils";
+import { rgbToString } from "./terrainUtils";
 
 interface WorldMapProps {
   width?: number;

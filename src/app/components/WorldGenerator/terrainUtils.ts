@@ -5,15 +5,9 @@ import {
   TERRAIN_HEIGHTS,
   TERRAIN_COLORS,
   ALL_TERRAIN_TYPES,
+  RGB,
 } from "./config";
 import { normalize } from "./noiseGenerator";
-
-// Interface for RGB color
-export interface RGB {
-  r: number;
-  g: number;
-  b: number;
-}
 
 // Helper to convert RGB to CSS string
 export const rgbToString = (color: RGB): string => {

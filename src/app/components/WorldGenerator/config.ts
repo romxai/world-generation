@@ -5,6 +5,13 @@ export const WINDOW_WIDTH = 1080;
 export const WINDOW_HEIGHT = 720;
 export const DEFAULT_TILE_SIZE = 16; // Base tile size in pixels
 
+// RGB color interface
+export interface RGB {
+  r: number;
+  g: number;
+  b: number;
+}
+
 // World dimensions
 export const WORLD_GRID_WIDTH = 1000; // Fixed number of tiles in the world (x-axis)
 export const WORLD_GRID_HEIGHT = 1000; // Fixed number of tiles in the world (y-axis)
@@ -13,7 +20,7 @@ export const WORLD_GRID_HEIGHT = 1000; // Fixed number of tiles in the world (y-
 export const DEFAULT_SEED = 42; // Default seed for reproducible generation
 export const NOISE_DETAIL = 9; // Detail level for noise generation
 export const NOISE_FALLOFF = 0.2; // Falloff rate for noise
-export const DEFAULT_OCTAVES = 4; // Default number of octaves for noise
+export const DEFAULT_OCTAVES = 5; // Default number of octaves for noise
 export const DEFAULT_OCTAVE_WEIGHT = 0.5; // Default weight for each octave
 export const DEFAULT_MOISTURE_SCALE = 150; // Default scale for moisture noise (higher = larger features)
 export const DEFAULT_ELEVATION_SCALE = 200; // Default scale for elevation noise (higher = larger features)
@@ -84,17 +91,17 @@ export enum BiomeType {
 // Biome weight presets - These determine the relative distribution of terrain types
 // Higher weight means more of that terrain type will appear in the world
 export const BIOME_PRESETS = {
-  // WORLD preset - Realistic Earth-like world with large continents and oceans
-  WORLD: [60, 15, 15, 10, 35, 25, 20],
+  // WORLD preset - Realistic Earth-like world with few large continents surrounded by large oceans
+  WORLD: [80, 10, 10, 5, 35, 25, 20],
 
   // CONTINENTS preset - Mostly land with large continents and less water
-  CONTINENTS: [25, 15, 15, 10, 45, 40, 35],
+  CONTINENTS: [20, 10, 10, 5, 50, 40, 30],
 
-  // ISLANDS preset - Scattered small islands across ocean
-  ISLANDS: [70, 20, 20, 15, 25, 20, 15],
+  // ISLANDS preset - Many small islands scattered across ocean
+  ISLANDS: [65, 15, 10, 5, 20, 15, 10],
 
   // Custom preset - User defined, initially same as CONTINENTS
-  CUSTOM: [25, 15, 15, 10, 45, 40, 35],
+  CUSTOM: [20, 10, 10, 5, 50, 40, 30],
 };
 
 // Terrain height thresholds (noise values) - these will be dynamically calculated from weights
@@ -111,11 +118,11 @@ export const TERRAIN_HEIGHTS = {
 
 // Default moisture thresholds - used for biome determination
 export const MOISTURE_THRESHOLDS = {
-  VERY_DRY: 0.2,
-  DRY: 0.4,
-  MEDIUM: 0.6,
-  WET: 0.8,
-  VERY_WET: 1.0,
+  VERY_DRY: 0.15, // Reduced to create more desert/arid regions
+  DRY: 0.35, // Adjusted for better transition
+  MEDIUM: 0.55, // Slightly lower for more balanced distribution
+  WET: 0.75, // Slightly lower for more balanced distribution
+  VERY_WET: 1.0, // Maximum stays the same
 };
 
 // Temperature thresholds for biome determination

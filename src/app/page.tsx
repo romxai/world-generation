@@ -35,9 +35,9 @@ export default function Home() {
   const [visualizationMode, setVisualizationMode] = useState<VisualizationMode>(
     VisualizationMode.BIOME
   );
-  const [biomePreset, setBiomePreset] = useState<string>("CONTINENTS");
+  const [biomePreset, setBiomePreset] = useState<string>("WORLD");
   const [biomeWeights, setBiomeWeights] = useState<number[]>(
-    BIOME_PRESETS.CONTINENTS
+    BIOME_PRESETS.WORLD
   );
 
   // Advanced noise settings
@@ -67,7 +67,7 @@ export default function Home() {
   const [showNoiseSettings, setShowNoiseSettings] = useState(false);
   const [showWeightEditor, setShowWeightEditor] = useState(false);
   const [customWeights, setCustomWeights] = useState<number[]>([
-    ...BIOME_PRESETS.CUSTOM,
+    ...BIOME_PRESETS.WORLD,
   ]);
 
   // Recalculate terrain heights preview when weights change
@@ -81,7 +81,15 @@ export default function Home() {
       setBiomeWeights([...customWeights]);
     } else {
       const preset = BIOME_PRESETS[biomePreset as keyof typeof BIOME_PRESETS];
-      setBiomeWeights([...preset]);
+      if (preset) {
+        setBiomeWeights([...preset]);
+
+        // Update the custom weights when switching to custom preset
+        // This helps users start with the currently selected preset as a base
+        if (biomePreset !== "CUSTOM") {
+          setCustomWeights([...preset]);
+        }
+      }
     }
   }, [biomePreset, customWeights]);
 
@@ -175,9 +183,9 @@ export default function Home() {
                   onChange={(e) => setBiomePreset(e.target.value)}
                   className="bg-gray-800 px-2 py-1 rounded w-full text-white"
                 >
-                  <option value="ISLANDS">Islands</option>
+                  <option value="WORLD">World Map</option>
                   <option value="CONTINENTS">Continents</option>
-                  <option value="LAKES">Lakes</option>
+                  <option value="ISLANDS">Islands</option>
                   <option value="CUSTOM">Custom</option>
                 </select>
                 <button
@@ -423,8 +431,9 @@ export default function Home() {
           <div className="bg-gray-800 p-4 rounded-lg mb-4">
             <h2 className="text-xl font-semibold mb-3">Biome Weight Editor</h2>
             <p className="text-sm text-gray-400 mb-2">
-              Adjust the weight of each biome type to change their distribution.
-              Higher values mean more of that biome will appear.
+              Adjust the weight of each terrain type to change terrain
+              distribution. Higher values mean more of that terrain type will
+              appear in the world.
             </p>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-4">
@@ -490,7 +499,10 @@ export default function Home() {
 
             <div className="flex gap-2 justify-end">
               <button
-                onClick={applyCustomWeights}
+                onClick={() => {
+                  setBiomePreset("CUSTOM");
+                  setBiomeWeights([...customWeights]);
+                }}
                 className="bg-blue-600 px-4 py-1 rounded hover:bg-blue-700"
               >
                 Apply Custom Weights

@@ -12,7 +12,6 @@ import {
   createMoistureNoise,
 } from "./octaveNoise";
 import {
-  ElevationMoistureData,
   getBiomeColor,
   getBiomeType,
   getElevationColor,

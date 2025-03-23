@@ -110,7 +110,7 @@ export class PerlinNoise {
 
     // Sum multiple noise functions with different frequencies
     for (let i = 0; i < this.octaves; i++) {
-      value += amplitude * this.noise2D(x * frequency, y * frequency);
+      value += amplitude * this.noise2D(x * 0.5 * frequency, y * 0.5 * frequency);
       max += amplitude;
       amplitude *= this.falloff;
       frequency *= 2;
