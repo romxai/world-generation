@@ -179,15 +179,8 @@ const WorldMap: React.FC<WorldMapProps> = ({
       moistureScale,
       elevationPersistence,
       moisturePersistence,
-      temperatureParams: {
-        equatorPosition: temperatureParams.equatorPosition,
-        temperatureVariance: temperatureParams.temperatureVariance,
-        elevationEffect: temperatureParams.elevationEffect,
-        polarTemperature: 0.0,
-        equatorTemperature: 1.0,
-        bandScale: temperatureParams.bandScale,
-      },
-      radialGradientParams: radialGradientParams,
+      temperatureParams,
+      radialGradientParams,
     });
     setMapChanged(true);
   }, [
@@ -558,131 +551,6 @@ const WorldMap: React.FC<WorldMapProps> = ({
           {debugInfo}
         </div>
       )}
-
-      <div
-        className="controls"
-        style={{
-          position: "absolute",
-          top: "10px",
-          right: "10px",
-          background: "rgba(0, 0, 0, 0.7)",
-          color: "white",
-          padding: "10px",
-          borderRadius: "5px",
-          width: "250px",
-        }}
-      >
-        <h4 style={{ margin: "0 0 10px 0" }}>Temperature Controls</h4>
-
-        <div style={{ marginBottom: "10px" }}>
-          <label
-            htmlFor="equatorPosition"
-            style={{ display: "block", marginBottom: "5px" }}
-          >
-            Equator Position: {temperatureParams.equatorPosition.toFixed(2)}
-          </label>
-          <input
-            id="equatorPosition"
-            type="range"
-            min="0"
-            max="1"
-            step="0.01"
-            value={temperatureParams.equatorPosition}
-            onChange={(e) =>
-              setCamera((prevCamera) => ({
-                ...prevCamera,
-                temperatureParams: {
-                  ...temperatureParams,
-                  equatorPosition: parseFloat(e.target.value),
-                },
-              }))
-            }
-            style={{ width: "100%" }}
-          />
-        </div>
-
-        <div style={{ marginBottom: "10px" }}>
-          <label
-            htmlFor="temperatureVariance"
-            style={{ display: "block", marginBottom: "5px" }}
-          >
-            Temperature Variance:{" "}
-            {temperatureParams.temperatureVariance.toFixed(2)}
-          </label>
-          <input
-            id="temperatureVariance"
-            type="range"
-            min="0"
-            max="0.5"
-            step="0.01"
-            value={temperatureParams.temperatureVariance}
-            onChange={(e) =>
-              setCamera((prevCamera) => ({
-                ...prevCamera,
-                temperatureParams: {
-                  ...temperatureParams,
-                  temperatureVariance: parseFloat(e.target.value),
-                },
-              }))
-            }
-            style={{ width: "100%" }}
-          />
-        </div>
-
-        <div style={{ marginBottom: "10px" }}>
-          <label
-            htmlFor="elevationTempEffect"
-            style={{ display: "block", marginBottom: "5px" }}
-          >
-            Elevation Effect on Temperature:{" "}
-            {temperatureParams.elevationEffect.toFixed(2)}
-          </label>
-          <input
-            id="elevationTempEffect"
-            type="range"
-            min="0"
-            max="1"
-            step="0.01"
-            value={temperatureParams.elevationEffect}
-            onChange={(e) =>
-              setCamera((prevCamera) => ({
-                ...prevCamera,
-                temperatureParams: {
-                  ...temperatureParams,
-                  elevationEffect: parseFloat(e.target.value),
-                },
-              }))
-            }
-            style={{ width: "100%" }}
-          />
-        </div>
-
-        <div>
-          <label
-            htmlFor="visualizationMode"
-            style={{ display: "block", marginBottom: "5px" }}
-          >
-            Visualization Mode:
-          </label>
-          <select
-            id="visualizationMode"
-            value={currentVisualizationMode}
-            onChange={(e) =>
-              setVisualizationMode(e.target.value as VisualizationMode)
-            }
-            style={{ width: "100%", padding: "5px" }}
-          >
-            <option value={VisualizationMode.BIOME}>Biome</option>
-            <option value={VisualizationMode.NOISE}>Raw Noise</option>
-            <option value={VisualizationMode.ELEVATION}>Elevation</option>
-            <option value={VisualizationMode.MOISTURE}>Moisture</option>
-            <option value={VisualizationMode.TEMPERATURE}>Temperature</option>
-            <option value={VisualizationMode.WEIGHT_DISTRIBUTION}>
-              Terrain Distribution
-            </option>
-          </select>
-        </div>
-      </div>
     </div>
   );
 };

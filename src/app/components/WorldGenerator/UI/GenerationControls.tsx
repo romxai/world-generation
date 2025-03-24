@@ -5,7 +5,7 @@
  * into logical groups for better user experience.
  */
 
-import React from "react";
+import React, { useState } from "react";
 import { VisualizationMode } from "../config";
 import NoiseControls from "./NoiseControls";
 import ClimateControls from "./ClimateControls";
@@ -78,109 +78,159 @@ interface GenerationControlsProps {
 }
 
 const GenerationControls: React.FC<GenerationControlsProps> = (props) => {
+  // State to track which section is active
+  const [activeSection, setActiveSection] = useState<string>("general");
+
+  // Toggle a section
+  const toggleSection = (section: string) => {
+    setActiveSection(activeSection === section ? "" : section);
+  };
+
   return (
     <div className="bg-gray-800 p-4 rounded-lg mb-4 w-full max-w-6xl">
       <h2 className="text-xl font-semibold mb-3">World Generation Controls</h2>
 
-      {/* Tab navigation for control groups */}
-      <div className="mb-4 border-b border-gray-700">
-        <ul className="flex flex-wrap -mb-px text-sm font-medium text-center">
-          <li className="mr-2">
-            <button className="inline-block p-3 bg-gray-700 rounded-t-lg active">
-              General
-            </button>
-          </li>
-          <li className="mr-2">
-            <button className="inline-block p-3 hover:bg-gray-600 rounded-t-lg">
-              Noise
-            </button>
-          </li>
-          <li className="mr-2">
-            <button className="inline-block p-3 hover:bg-gray-600 rounded-t-lg">
-              Climate
-            </button>
-          </li>
-          <li className="mr-2">
-            <button className="inline-block p-3 hover:bg-gray-600 rounded-t-lg">
-              Radial Effect
-            </button>
-          </li>
-          <li>
-            <button className="inline-block p-3 hover:bg-gray-600 rounded-t-lg">
-              Biomes
-            </button>
-          </li>
-        </ul>
+      {/* Control sections - collapsed by default */}
+      <div className="space-y-2">
+        {/* General Controls Section */}
+        <div className="border border-gray-700 rounded-lg overflow-hidden">
+          <button
+            onClick={() => toggleSection("general")}
+            className="w-full flex justify-between items-center p-3 bg-gray-700 hover:bg-gray-600 transition text-left"
+          >
+            <span className="font-medium">General Settings</span>
+            <span>{activeSection === "general" ? "▼" : "►"}</span>
+          </button>
+
+          {activeSection === "general" && (
+            <div className="p-3">
+              <GeneralControls
+                seed={props.seed}
+                setSeed={props.setSeed}
+                visualizationMode={props.visualizationMode}
+                setVisualizationMode={props.setVisualizationMode}
+                biomePreset={props.biomePreset}
+                setBiomePreset={props.setBiomePreset}
+                generateNewSeed={props.generateNewSeed}
+                showWeightEditor={props.showWeightEditor}
+                setShowWeightEditor={props.setShowWeightEditor}
+              />
+            </div>
+          )}
+        </div>
+
+        {/* Noise Controls Section */}
+        <div className="border border-gray-700 rounded-lg overflow-hidden">
+          <button
+            onClick={() => toggleSection("noise")}
+            className="w-full flex justify-between items-center p-3 bg-gray-700 hover:bg-gray-600 transition text-left"
+          >
+            <span className="font-medium">Noise Generation Settings</span>
+            <span>{activeSection === "noise" ? "▼" : "►"}</span>
+          </button>
+
+          {activeSection === "noise" && (
+            <div className="p-3">
+              <NoiseControls
+                noiseDetail={props.noiseDetail}
+                setNoiseDetail={props.setNoiseDetail}
+                noiseFalloff={props.noiseFalloff}
+                setNoiseFalloff={props.setNoiseFalloff}
+                elevationOctaves={props.elevationOctaves}
+                setElevationOctaves={props.setElevationOctaves}
+                moistureOctaves={props.moistureOctaves}
+                setMoistureOctaves={props.setMoistureOctaves}
+                elevationScale={props.elevationScale}
+                setElevationScale={props.setElevationScale}
+                moistureScale={props.moistureScale}
+                setMoistureScale={props.setMoistureScale}
+                elevationPersistence={props.elevationPersistence}
+                setElevationPersistence={props.setElevationPersistence}
+                moisturePersistence={props.moisturePersistence}
+                setMoisturePersistence={props.setMoisturePersistence}
+              />
+            </div>
+          )}
+        </div>
+
+        {/* Climate Controls Section */}
+        <div className="border border-gray-700 rounded-lg overflow-hidden">
+          <button
+            onClick={() => toggleSection("climate")}
+            className="w-full flex justify-between items-center p-3 bg-gray-700 hover:bg-gray-600 transition text-left"
+          >
+            <span className="font-medium">Temperature & Climate Settings</span>
+            <span>{activeSection === "climate" ? "▼" : "►"}</span>
+          </button>
+
+          {activeSection === "climate" && (
+            <div className="p-3">
+              <ClimateControls
+                equatorPosition={props.equatorPosition}
+                setEquatorPosition={props.setEquatorPosition}
+                temperatureVariance={props.temperatureVariance}
+                setTemperatureVariance={props.setTemperatureVariance}
+                elevationTempEffect={props.elevationTempEffect}
+                setElevationTempEffect={props.setElevationTempEffect}
+                temperatureBandScale={props.temperatureBandScale}
+                setTemperatureBandScale={props.setTemperatureBandScale}
+              />
+            </div>
+          )}
+        </div>
+
+        {/* Ocean Radial Effect Section */}
+        <div className="border border-gray-700 rounded-lg overflow-hidden">
+          <button
+            onClick={() => toggleSection("radial")}
+            className="w-full flex justify-between items-center p-3 bg-gray-700 hover:bg-gray-600 transition text-left"
+          >
+            <span className="font-medium">Ocean Radial Effect</span>
+            <span>{activeSection === "radial" ? "▼" : "►"}</span>
+          </button>
+
+          {activeSection === "radial" && (
+            <div className="p-3">
+              <RadialGradientControls
+                radialCenterX={props.radialCenterX}
+                setRadialCenterX={props.setRadialCenterX}
+                radialCenterY={props.radialCenterY}
+                setRadialCenterY={props.setRadialCenterY}
+                radialRadius={props.radialRadius}
+                setRadialRadius={props.setRadialRadius}
+                radialFalloffExponent={props.radialFalloffExponent}
+                setRadialFalloffExponent={props.setRadialFalloffExponent}
+                radialStrength={props.radialStrength}
+                setRadialStrength={props.setRadialStrength}
+              />
+            </div>
+          )}
+        </div>
+
+        {/* Biome Controls Section */}
+        <div className="border border-gray-700 rounded-lg overflow-hidden">
+          <button
+            onClick={() => toggleSection("biomes")}
+            className="w-full flex justify-between items-center p-3 bg-gray-700 hover:bg-gray-600 transition text-left"
+          >
+            <span className="font-medium">Biome Distribution</span>
+            <span>{activeSection === "biomes" ? "▼" : "►"}</span>
+          </button>
+
+          {activeSection === "biomes" && (
+            <div className="p-3">
+              <BiomeControls
+                biomeWeights={props.biomeWeights}
+                setBiomeWeights={props.setBiomeWeights}
+                customWeights={props.customWeights}
+                setCustomWeights={props.setCustomWeights}
+                applyCustomWeights={props.applyCustomWeights}
+                showWeightEditor={props.showWeightEditor}
+              />
+            </div>
+          )}
+        </div>
       </div>
-
-      {/* General controls */}
-      <GeneralControls
-        seed={props.seed}
-        setSeed={props.setSeed}
-        visualizationMode={props.visualizationMode}
-        setVisualizationMode={props.setVisualizationMode}
-        biomePreset={props.biomePreset}
-        setBiomePreset={props.setBiomePreset}
-        generateNewSeed={props.generateNewSeed}
-        showWeightEditor={props.showWeightEditor}
-        setShowWeightEditor={props.setShowWeightEditor}
-      />
-
-      {/* Noise controls */}
-      <NoiseControls
-        noiseDetail={props.noiseDetail}
-        setNoiseDetail={props.setNoiseDetail}
-        noiseFalloff={props.noiseFalloff}
-        setNoiseFalloff={props.setNoiseFalloff}
-        elevationOctaves={props.elevationOctaves}
-        setElevationOctaves={props.setElevationOctaves}
-        moistureOctaves={props.moistureOctaves}
-        setMoistureOctaves={props.setMoistureOctaves}
-        elevationScale={props.elevationScale}
-        setElevationScale={props.setElevationScale}
-        moistureScale={props.moistureScale}
-        setMoistureScale={props.setMoistureScale}
-        elevationPersistence={props.elevationPersistence}
-        setElevationPersistence={props.setElevationPersistence}
-        moisturePersistence={props.moisturePersistence}
-        setMoisturePersistence={props.setMoisturePersistence}
-      />
-
-      {/* Climate controls */}
-      <ClimateControls
-        equatorPosition={props.equatorPosition}
-        setEquatorPosition={props.setEquatorPosition}
-        temperatureVariance={props.temperatureVariance}
-        setTemperatureVariance={props.setTemperatureVariance}
-        elevationTempEffect={props.elevationTempEffect}
-        setElevationTempEffect={props.setElevationTempEffect}
-        temperatureBandScale={props.temperatureBandScale}
-        setTemperatureBandScale={props.setTemperatureBandScale}
-      />
-
-      {/* Radial gradient controls */}
-      <RadialGradientControls
-        radialCenterX={props.radialCenterX}
-        setRadialCenterX={props.setRadialCenterX}
-        radialCenterY={props.radialCenterY}
-        setRadialCenterY={props.setRadialCenterY}
-        radialRadius={props.radialRadius}
-        setRadialRadius={props.setRadialRadius}
-        radialFalloffExponent={props.radialFalloffExponent}
-        setRadialFalloffExponent={props.setRadialFalloffExponent}
-        radialStrength={props.radialStrength}
-        setRadialStrength={props.setRadialStrength}
-      />
-
-      {/* Biome controls */}
-      <BiomeControls
-        biomeWeights={props.biomeWeights}
-        setBiomeWeights={props.setBiomeWeights}
-        customWeights={props.customWeights}
-        setCustomWeights={props.setCustomWeights}
-        applyCustomWeights={props.applyCustomWeights}
-        showWeightEditor={props.showWeightEditor}
-      />
     </div>
   );
 };

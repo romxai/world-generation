@@ -32,9 +32,7 @@ const BiomeControls: React.FC<BiomeControlsProps> = ({
   };
 
   return (
-    <div className="mt-4">
-      <h3 className="text-lg font-medium mb-3">Biome Distribution</h3>
-
+    <div>
       {showWeightEditor && (
         <div className="bg-gray-700 p-4 rounded-md mb-4">
           <h4 className="font-medium mb-3">Terrain Type Weights</h4>
