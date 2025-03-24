@@ -13,21 +13,8 @@ import {
   MOISTURE_THRESHOLDS,
   RGB,
   TEMPERATURE_THRESHOLDS,
+  ELEVATION_THRESHOLDS,
 } from "./config";
-
-/**
- * Range of values defining elevation bands
- */
-export const ELEVATION_BANDS = {
-  WATER_DEEP: 0.45, // Deep ocean - increased to create more deep ocean
-  WATER_MEDIUM: 0.48, // Medium depth water
-  WATER_SHALLOW: 0.5, // Shallow water - increased to create more defined shorelines
-  SHORE: 0.51, // Beach/shore zone - narrow transition band
-  LOW: 0.55, // Low elevation areas (plains, deserts, etc.)
-  MEDIUM: 0.7, // Medium elevation (hills, forests)
-  HIGH: 0.82, // High elevation (mountains)
-  VERY_HIGH: 0.9, // Very high elevation (peaks)
-};
 
 /**
  * Interface to store elevation, moisture, and temperature data
@@ -40,6 +27,7 @@ export interface BiomeData {
   y: number;
   moistureThresholds?: any; // Using 'any' temporarily
   temperatureThresholds?: any; // Using 'any' temporarily
+  elevationThresholds?: any; // Using 'any' temporarily
 }
 
 /**
@@ -63,24 +51,25 @@ export function getBiomeType(data: BiomeData): BiomeType {
   const moistureThresholds = data.moistureThresholds || MOISTURE_THRESHOLDS;
   const temperatureThresholds =
     data.temperatureThresholds || TEMPERATURE_THRESHOLDS;
+  const elevationThresholds = data.elevationThresholds || ELEVATION_THRESHOLDS;
 
   // Deep water biomes - only affected by elevation, not moisture or temperature
-  if (elevation < ELEVATION_BANDS.WATER_DEEP) {
+  if (elevation < elevationThresholds.WATER_DEEP) {
     return BiomeType.OCEAN_DEEP;
   }
 
   // Medium water biomes
-  if (elevation < ELEVATION_BANDS.WATER_MEDIUM) {
+  if (elevation < elevationThresholds.WATER_MEDIUM) {
     return BiomeType.OCEAN_MEDIUM;
   }
 
   // Shallow water biomes
-  if (elevation < ELEVATION_BANDS.WATER_SHALLOW) {
+  if (elevation < elevationThresholds.WATER_SHALLOW) {
     return BiomeType.OCEAN_SHALLOW;
   }
 
   // Shore biomes - affected by temperature and moisture
-  if (elevation < ELEVATION_BANDS.SHORE) {
+  if (elevation < elevationThresholds.SHORE) {
     // Rocky shores more common in colder areas or areas with high moisture
     // Sandy beaches in warmer and drier areas
     if (
@@ -94,7 +83,7 @@ export function getBiomeType(data: BiomeData): BiomeType {
   }
 
   // Low elevation biomes - highly affected by moisture and temperature
-  if (elevation < ELEVATION_BANDS.LOW) {
+  if (elevation < elevationThresholds.LOW) {
     // Very cold regions - Tundra regardless of moisture
     if (temperature < temperatureThresholds.FREEZING) {
       return BiomeType.TUNDRA;
@@ -145,7 +134,7 @@ export function getBiomeType(data: BiomeData): BiomeType {
   }
 
   // Medium elevation biomes - affected by temperature and moisture but less variety
-  if (elevation < ELEVATION_BANDS.HIGH) {
+  if (elevation < elevationThresholds.MEDIUM) {
     // Temperature primarily affects vegetation type
     if (temperature < temperatureThresholds.FREEZING) {
       return BiomeType.TUNDRA; // Updated to tundra for the coldest regions
@@ -171,7 +160,7 @@ export function getBiomeType(data: BiomeData): BiomeType {
   }
 
   // High elevation biomes - mostly affected by temperature
-  if (elevation < ELEVATION_BANDS.VERY_HIGH) {
+  if (elevation < elevationThresholds.HIGH) {
     if (temperature < temperatureThresholds.FREEZING) {
       return BiomeType.SNOW;
     } else if (temperature < temperatureThresholds.COLD) {
@@ -186,13 +175,18 @@ export function getBiomeType(data: BiomeData): BiomeType {
   }
 
   // Very high elevation - mountain peaks, etc.
-  if (temperature < temperatureThresholds.COOL) {
-    return BiomeType.SNOW;
-  } else if (temperature < temperatureThresholds.MILD) {
-    return BiomeType.BARE;
-  } else {
-    return BiomeType.SCORCHED;
+  if (elevation < elevationThresholds.VERY_HIGH) {
+    if (temperature < temperatureThresholds.COOL) {
+      return BiomeType.SNOW;
+    } else if (temperature < temperatureThresholds.MILD) {
+      return BiomeType.BARE;
+    } else {
+      return BiomeType.SCORCHED;
+    }
   }
+
+  // Extreme elevation
+  return BiomeType.SNOW; // Default to snow for the highest peaks
 }
 
 /**

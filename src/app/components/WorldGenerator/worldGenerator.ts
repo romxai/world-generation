@@ -58,6 +58,7 @@ export interface WorldGeneratorConfig {
   radialGradientParams: RadialGradientParams;
   moistureThresholds?: any; // Using 'any' temporarily, ideally should be properly typed
   temperatureThresholds?: any; // Using 'any' temporarily, ideally should be properly typed
+  elevationThresholds?: any; // Using 'any' temporarily, ideally should be properly typed
 }
 
 /**
@@ -70,6 +71,7 @@ export class WorldGenerator {
   private temperatureMapper: TemperatureMapper;
   private moistureThresholds: any; // Using 'any' temporarily
   private temperatureThresholds: any; // Using 'any' temporarily
+  private elevationThresholds: any; // Using 'any' temporarily
 
   /**
    * Create a new world generator with the specified configuration
@@ -84,6 +86,7 @@ export class WorldGenerator {
     // Store thresholds
     this.moistureThresholds = config.moistureThresholds || {};
     this.temperatureThresholds = config.temperatureThresholds || {};
+    this.elevationThresholds = config.elevationThresholds || {};
 
     // Create noise generators for elevation and moisture
     this.elevationNoise = createElevationNoise(
@@ -126,6 +129,9 @@ export class WorldGenerator {
     }
     if (newConfig.temperatureThresholds) {
       this.temperatureThresholds = newConfig.temperatureThresholds;
+    }
+    if (newConfig.elevationThresholds) {
+      this.elevationThresholds = newConfig.elevationThresholds;
     }
 
     // If seed changed, recreate the noise generators
@@ -259,6 +265,7 @@ export class WorldGenerator {
       // Add threshold data for biome determination
       moistureThresholds: this.moistureThresholds,
       temperatureThresholds: this.temperatureThresholds,
+      elevationThresholds: this.elevationThresholds,
     };
   }
 
