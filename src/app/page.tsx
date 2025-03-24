@@ -23,7 +23,13 @@ import {
   DEFAULT_OCTAVE_WEIGHT,
   BIOME_NAMES,
   BiomeType,
+  DEFAULT_EQUATOR_POSITION,
+  DEFAULT_TEMPERATURE_VARIANCE,
+  DEFAULT_ELEVATION_TEMP_EFFECT,
+  DEFAULT_TEMPERATURE_BAND_SCALE,
 } from "./components/WorldGenerator/config";
+import GenerationControls from "./components/WorldGenerator/UI/GenerationControls";
+import { DEFAULT_RADIAL_PARAMS } from "./components/WorldGenerator/radialUtils";
 
 export default function Home() {
   // Basic settings
@@ -44,7 +50,7 @@ export default function Home() {
   const [noiseDetail, setNoiseDetail] = useState<number>(NOISE_DETAIL);
   const [noiseFalloff, setNoiseFalloff] = useState<number>(NOISE_FALLOFF);
 
-  // New multi-octave noise settings
+  // Multi-octave noise settings
   const [elevationOctaves, setElevationOctaves] =
     useState<number>(DEFAULT_OCTAVES);
   const [moistureOctaves, setMoistureOctaves] =
@@ -62,9 +68,38 @@ export default function Home() {
     DEFAULT_OCTAVE_WEIGHT
   );
 
+  // Temperature settings
+  const [equatorPosition, setEquatorPosition] = useState<number>(
+    DEFAULT_EQUATOR_POSITION
+  );
+  const [temperatureVariance, setTemperatureVariance] = useState<number>(
+    DEFAULT_TEMPERATURE_VARIANCE
+  );
+  const [elevationTempEffect, setElevationTempEffect] = useState<number>(
+    DEFAULT_ELEVATION_TEMP_EFFECT
+  );
+  const [temperatureBandScale, setTemperatureBandScale] = useState<number>(
+    DEFAULT_TEMPERATURE_BAND_SCALE
+  );
+
+  // Radial gradient settings for ocean effect
+  const [radialCenterX, setRadialCenterX] = useState<number>(
+    DEFAULT_RADIAL_PARAMS.centerX || 0.5
+  );
+  const [radialCenterY, setRadialCenterY] = useState<number>(
+    DEFAULT_RADIAL_PARAMS.centerY || 0.5
+  );
+  const [radialRadius, setRadialRadius] = useState<number>(
+    DEFAULT_RADIAL_PARAMS.radius || 0.6
+  );
+  const [radialFalloffExponent, setRadialFalloffExponent] = useState<number>(
+    DEFAULT_RADIAL_PARAMS.falloffExponent || 3
+  );
+  const [radialStrength, setRadialStrength] = useState<number>(
+    DEFAULT_RADIAL_PARAMS.strength || 0.7
+  );
+
   // UI state
-  const [showAdvancedSettings, setShowAdvancedSettings] = useState(false);
-  const [showNoiseSettings, setShowNoiseSettings] = useState(false);
   const [showWeightEditor, setShowWeightEditor] = useState(false);
   const [customWeights, setCustomWeights] = useState<number[]>([
     ...BIOME_PRESETS.WORLD,
@@ -126,397 +161,74 @@ export default function Home() {
       <h1 className="text-3xl font-bold mb-2">Procedural World Generator</h1>
 
       <div className="w-full max-w-6xl mb-4">
-        {/* Main controls panel */}
-        <div className="bg-gray-800 p-4 rounded-lg mb-4">
-          <h2 className="text-xl font-semibold mb-3">Map Controls</h2>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {/* Seed section */}
-            <div className="bg-gray-700 p-3 rounded-md">
-              <h3 className="font-medium mb-2">World Seed</h3>
-              <div className="flex items-center gap-2">
-                <input
-                  id="seed"
-                  type="number"
-                  value={seed}
-                  onChange={(e) => setSeed(Number(e.target.value))}
-                  className="bg-gray-800 px-2 py-1 rounded w-24 text-white"
-                />
-                <button
-                  onClick={generateNewSeed}
-                  className="bg-blue-600 px-3 py-1 rounded hover:bg-blue-700 text-sm"
-                >
-                  Random
-                </button>
-              </div>
-            </div>
-
-            {/* Visualization mode */}
-            <div className="bg-gray-700 p-3 rounded-md">
-              <h3 className="font-medium mb-2">Visualization</h3>
-              <select
-                value={visualizationMode}
-                onChange={(e) =>
-                  setVisualizationMode(e.target.value as VisualizationMode)
-                }
-                className="bg-gray-800 px-2 py-1 rounded w-full text-white"
-              >
-                <option value={VisualizationMode.BIOME}>Biome Colors</option>
-                <option value={VisualizationMode.NOISE}>Raw Noise</option>
-                <option value={VisualizationMode.ELEVATION}>Elevation</option>
-                <option value={VisualizationMode.MOISTURE}>Moisture</option>
-                <option value={VisualizationMode.TEMPERATURE}>
-                  Temperature
-                </option>
-                <option value={VisualizationMode.WEIGHT_DISTRIBUTION}>
-                  Weight Distribution
-                </option>
-              </select>
-            </div>
-
-            {/* Biome preset section */}
-            <div className="bg-gray-700 p-3 rounded-md">
-              <h3 className="font-medium mb-2">Biome Preset</h3>
-              <div className="flex flex-col gap-2">
-                <select
-                  value={biomePreset}
-                  onChange={(e) => setBiomePreset(e.target.value)}
-                  className="bg-gray-800 px-2 py-1 rounded w-full text-white"
-                >
-                  <option value="WORLD">World Map</option>
-                  <option value="CONTINENTS">Continents</option>
-                  <option value="ISLANDS">Islands</option>
-                  <option value="CUSTOM">Custom</option>
-                </select>
-                <button
-                  onClick={() => setShowWeightEditor(!showWeightEditor)}
-                  className="bg-blue-600 px-3 py-1 rounded hover:bg-blue-700 text-sm"
-                >
-                  {showWeightEditor ? "Hide Weight Editor" : "Edit Weights"}
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Advanced controls toggle */}
-          <div className="mt-4 flex flex-col gap-2">
-            <button
-              onClick={() => setShowAdvancedSettings(!showAdvancedSettings)}
-              className="text-sm text-blue-400 hover:text-blue-300 flex items-center"
-            >
-              {showAdvancedSettings ? "▼ " : "► "}
-              Advanced Settings
-            </button>
-
-            <button
-              onClick={() => setShowNoiseSettings(!showNoiseSettings)}
-              className="text-sm text-blue-400 hover:text-blue-300 flex items-center"
-            >
-              {showNoiseSettings ? "▼ " : "► "}
-              Noise Generator Settings
-            </button>
-          </div>
-
-          {/* Advanced settings */}
-          {showAdvancedSettings && (
-            <div className="mt-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              <div className="bg-gray-700 p-3 rounded-md">
-                <h3 className="font-medium mb-2">Noise Detail</h3>
-                <div className="flex flex-col gap-1">
-                  <input
-                    type="range"
-                    min="1"
-                    max="20"
-                    value={noiseDetail}
-                    onChange={(e) => setNoiseDetail(Number(e.target.value))}
-                    className="w-full"
-                  />
-                  <div className="flex justify-between">
-                    <span className="text-xs">Low ({noiseDetail})</span>
-                    <span className="text-xs">High</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-gray-700 p-3 rounded-md">
-                <h3 className="font-medium mb-2">Noise Falloff</h3>
-                <div className="flex flex-col gap-1">
-                  <input
-                    type="range"
-                    min="0.1"
-                    max="0.9"
-                    step="0.05"
-                    value={noiseFalloff}
-                    onChange={(e) => setNoiseFalloff(Number(e.target.value))}
-                    className="w-full"
-                  />
-                  <div className="flex justify-between">
-                    <span className="text-xs">Smooth ({noiseFalloff})</span>
-                    <span className="text-xs">Rough</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-gray-700 p-3 rounded-md">
-                <h3 className="font-medium mb-2">Tile Size</h3>
-                <select
-                  id="tileSize"
-                  value={tileSize}
-                  onChange={(e) => setTileSize(Number(e.target.value))}
-                  className="bg-gray-800 px-2 py-1 rounded w-full text-white"
-                >
-                  <option value="8">8px</option>
-                  <option value="16">16px</option>
-                  <option value="32">32px</option>
-                  <option value="64">64px</option>
-                </select>
-              </div>
-
-              <div className="bg-gray-700 p-3 rounded-md">
-                <h3 className="font-medium mb-2">Debug Mode</h3>
-                <div className="flex items-center gap-2">
-                  <input
-                    id="debug"
-                    type="checkbox"
-                    checked={debug}
-                    onChange={(e) => setDebug(e.target.checked)}
-                    className="bg-gray-800 rounded h-5 w-5"
-                  />
-                  <label htmlFor="debug">Show Debug Information</label>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Noise Generator Settings */}
-          {showNoiseSettings && (
-            <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Elevation Noise Settings */}
-              <div className="bg-gray-700 p-3 rounded-md">
-                <h3 className="font-medium mb-2">Elevation Noise Settings</h3>
-
-                <div className="mb-2">
-                  <label className="block text-sm mb-1">Octaves</label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="range"
-                      min="1"
-                      max="8"
-                      value={elevationOctaves}
-                      onChange={(e) =>
-                        setElevationOctaves(Number(e.target.value))
-                      }
-                      className="w-full"
-                    />
-                    <span className="text-xs">{elevationOctaves}</span>
-                  </div>
-                  <p className="text-xs text-gray-400">
-                    Higher values add more detail
-                  </p>
-                </div>
-
-                <div className="mb-2">
-                  <label className="block text-sm mb-1">Scale</label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="range"
-                      min="50"
-                      max="500"
-                      step="10"
-                      value={elevationScale}
-                      onChange={(e) =>
-                        setElevationScale(Number(e.target.value))
-                      }
-                      className="w-full"
-                    />
-                    <span className="text-xs">{elevationScale}</span>
-                  </div>
-                  <p className="text-xs text-gray-400">
-                    Higher values create larger land features
-                  </p>
-                </div>
-
-                <div>
-                  <label className="block text-sm mb-1">Persistence</label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="range"
-                      min="0.1"
-                      max="0.9"
-                      step="0.05"
-                      value={elevationPersistence}
-                      onChange={(e) =>
-                        setElevationPersistence(Number(e.target.value))
-                      }
-                      className="w-full"
-                    />
-                    <span className="text-xs">{elevationPersistence}</span>
-                  </div>
-                  <p className="text-xs text-gray-400">
-                    How much detail each octave adds
-                  </p>
-                </div>
-              </div>
-
-              {/* Moisture Noise Settings */}
-              <div className="bg-gray-700 p-3 rounded-md">
-                <h3 className="font-medium mb-2">Moisture Noise Settings</h3>
-
-                <div className="mb-2">
-                  <label className="block text-sm mb-1">Octaves</label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="range"
-                      min="1"
-                      max="8"
-                      value={moistureOctaves}
-                      onChange={(e) =>
-                        setMoistureOctaves(Number(e.target.value))
-                      }
-                      className="w-full"
-                    />
-                    <span className="text-xs">{moistureOctaves}</span>
-                  </div>
-                  <p className="text-xs text-gray-400">
-                    Higher values add more detail
-                  </p>
-                </div>
-
-                <div className="mb-2">
-                  <label className="block text-sm mb-1">Scale</label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="range"
-                      min="50"
-                      max="500"
-                      step="10"
-                      value={moistureScale}
-                      onChange={(e) => setMoistureScale(Number(e.target.value))}
-                      className="w-full"
-                    />
-                    <span className="text-xs">{moistureScale}</span>
-                  </div>
-                  <p className="text-xs text-gray-400">
-                    Higher values create larger moisture regions
-                  </p>
-                </div>
-
-                <div>
-                  <label className="block text-sm mb-1">Persistence</label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="range"
-                      min="0.1"
-                      max="0.9"
-                      step="0.05"
-                      value={moisturePersistence}
-                      onChange={(e) =>
-                        setMoisturePersistence(Number(e.target.value))
-                      }
-                      className="w-full"
-                    />
-                    <span className="text-xs">{moisturePersistence}</span>
-                  </div>
-                  <p className="text-xs text-gray-400">
-                    How much detail each octave adds
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Weight editor panel */}
-        {showWeightEditor && (
-          <div className="bg-gray-800 p-4 rounded-lg mb-4">
-            <h2 className="text-xl font-semibold mb-3">Biome Weight Editor</h2>
-            <p className="text-sm text-gray-400 mb-2">
-              Adjust the weight of each terrain type to change terrain
-              distribution. Higher values mean more of that terrain type will
-              appear in the world.
-            </p>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-4">
-              {customWeights.map((weight, index) => (
-                <div key={index} className="bg-gray-700 p-3 rounded-md">
-                  <div className="flex justify-between mb-1">
-                    <h3 className="font-medium">
-                      {TERRAIN_NAMES[index as TerrainType]}
-                    </h3>
-                    <div
-                      className="w-5 h-5 rounded-sm"
-                      style={{
-                        backgroundColor:
-                          index === TerrainType.OCEAN_DEEP
-                            ? "rgb(30, 120, 200)"
-                            : index === TerrainType.OCEAN_MEDIUM
-                            ? "rgb(35, 140, 220)"
-                            : index === TerrainType.OCEAN_SHALLOW
-                            ? "rgb(40, 160, 230)"
-                            : index === TerrainType.BEACH
-                            ? "rgb(215, 192, 158)"
-                            : index === TerrainType.GRASS
-                            ? "rgb(2, 166, 155)"
-                            : index === TerrainType.MOUNTAIN
-                            ? "rgb(90, 90, 90)"
-                            : "rgb(220, 220, 220)",
-                      }}
-                    />
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="range"
-                      min="0"
-                      max="100"
-                      value={weight}
-                      onChange={(e) =>
-                        handleWeightChange(index, Number(e.target.value))
-                      }
-                      className="w-full"
-                    />
-                    <input
-                      type="number"
-                      min="0"
-                      max="100"
-                      value={weight}
-                      onChange={(e) =>
-                        handleWeightChange(index, Number(e.target.value))
-                      }
-                      className="bg-gray-800 px-2 py-1 rounded w-14 text-white text-sm"
-                    />
-                  </div>
-
-                  {/* Show resulting threshold range */}
-                  <div className="text-xs text-gray-400 mt-1">
-                    Range:{" "}
-                    {terrainHeightsPreview[index as TerrainType].min.toFixed(2)}{" "}
-                    -{" "}
-                    {terrainHeightsPreview[index as TerrainType].max.toFixed(2)}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="flex gap-2 justify-end">
-              <button
-                onClick={() => {
-                  setBiomePreset("CUSTOM");
-                  setBiomeWeights([...customWeights]);
-                }}
-                className="bg-blue-600 px-4 py-1 rounded hover:bg-blue-700"
-              >
-                Apply Custom Weights
-              </button>
-            </div>
-          </div>
-        )}
+        {/* Main controls using the new UI components */}
+        <GenerationControls
+          // Basic properties
+          seed={seed}
+          setSeed={setSeed}
+          visualizationMode={visualizationMode}
+          setVisualizationMode={setVisualizationMode}
+          biomePreset={biomePreset}
+          setBiomePreset={setBiomePreset}
+          // Noise properties
+          noiseDetail={noiseDetail}
+          setNoiseDetail={setNoiseDetail}
+          noiseFalloff={noiseFalloff}
+          setNoiseFalloff={setNoiseFalloff}
+          elevationOctaves={elevationOctaves}
+          setElevationOctaves={setElevationOctaves}
+          moistureOctaves={moistureOctaves}
+          setMoistureOctaves={setMoistureOctaves}
+          elevationScale={elevationScale}
+          setElevationScale={setElevationScale}
+          moistureScale={moistureScale}
+          setMoistureScale={setMoistureScale}
+          elevationPersistence={elevationPersistence}
+          setElevationPersistence={setElevationPersistence}
+          moisturePersistence={moisturePersistence}
+          setMoisturePersistence={setMoisturePersistence}
+          // Climate properties
+          equatorPosition={equatorPosition}
+          setEquatorPosition={setEquatorPosition}
+          temperatureVariance={temperatureVariance}
+          setTemperatureVariance={setTemperatureVariance}
+          elevationTempEffect={elevationTempEffect}
+          setElevationTempEffect={setElevationTempEffect}
+          temperatureBandScale={temperatureBandScale}
+          setTemperatureBandScale={setTemperatureBandScale}
+          // Radial gradient properties
+          radialCenterX={radialCenterX}
+          setRadialCenterX={setRadialCenterX}
+          radialCenterY={radialCenterY}
+          setRadialCenterY={setRadialCenterY}
+          radialRadius={radialRadius}
+          setRadialRadius={setRadialRadius}
+          radialFalloffExponent={radialFalloffExponent}
+          setRadialFalloffExponent={setRadialFalloffExponent}
+          radialStrength={radialStrength}
+          setRadialStrength={setRadialStrength}
+          // Biome properties
+          biomeWeights={biomeWeights}
+          setBiomeWeights={setBiomeWeights}
+          customWeights={customWeights}
+          setCustomWeights={setCustomWeights}
+          // UI state
+          showWeightEditor={showWeightEditor}
+          setShowWeightEditor={setShowWeightEditor}
+          // Actions
+          generateNewSeed={generateNewSeed}
+          applyCustomWeights={applyCustomWeights}
+        />
       </div>
 
-      <div className="w-full max-w-6xl">
+      {/* The world map visualization */}
+      <div className="w-full max-w-6xl mb-4 relative bg-black rounded-lg overflow-hidden">
         <WorldMap
+          width={WINDOW_WIDTH}
+          height={WINDOW_HEIGHT}
+          tileSize={tileSize}
           seed={seed}
           debug={debug}
-          tileSize={tileSize}
           biomeWeights={biomeWeights}
           noiseDetail={noiseDetail}
           noiseFalloff={noiseFalloff}
@@ -527,18 +239,26 @@ export default function Home() {
           moistureScale={moistureScale}
           elevationPersistence={elevationPersistence}
           moisturePersistence={moisturePersistence}
+          temperatureParams={{
+            equatorPosition,
+            temperatureVariance,
+            elevationEffect: elevationTempEffect,
+            bandScale: temperatureBandScale,
+          }}
+          radialGradientParams={{
+            centerX: radialCenterX,
+            centerY: radialCenterY,
+            radius: radialRadius,
+            falloffExponent: radialFalloffExponent,
+            strength: radialStrength,
+          }}
         />
       </div>
 
-      <div className="mt-2 text-sm text-gray-400 max-w-3xl text-center">
-        <p>
-          This world is divided into a fixed {WORLD_GRID_WIDTH}x
-          {WORLD_GRID_HEIGHT} grid of purchasable tiles. The map is generated
-          using Perlin noise to create natural-looking terrain with islands and
-          continents. Tiles are only rendered when they are visible in the
-          viewport for better performance.
-        </p>
-      </div>
+      <footer className="text-sm text-gray-500 mt-4">
+        Use mouse wheel to zoom, drag to pan, and controls above to adjust the
+        world generation.
+      </footer>
     </div>
   );
 }

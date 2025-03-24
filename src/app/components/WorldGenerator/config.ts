@@ -30,6 +30,7 @@ export const DEFAULT_ELEVATION_SCALE = 200; // Default scale for elevation noise
 export const DEFAULT_EQUATOR_POSITION = 0.5; // Where the equator is located (0-1)
 export const DEFAULT_TEMPERATURE_VARIANCE = 0.2; // Random variation in temperature
 export const DEFAULT_ELEVATION_TEMP_EFFECT = 0.2; // How much elevation cools temperature
+export const DEFAULT_TEMPERATURE_BAND_SCALE = 1.0; // Scale factor for temperature bands (1.0 = normal)
 
 // Camera and zoom settings
 export const INITIAL_ZOOM = 1.0; // Starting zoom level (1.0 = 100%)
@@ -238,7 +239,7 @@ export const BIOME_COLORS = {
 
   // High elevation areas
   [BiomeType.TAIGA]: { r: 120, g: 155, b: 135 },
-  [BiomeType.TUNDRA]: { r: 180, g: 200, b: 170 },
+  [BiomeType.TUNDRA]: { r: 205, g: 235, b: 240 }, // New whitish-blue color for tundra
 
   // Very high elevation areas
   [BiomeType.BARE]: { r: 140, g: 135, b: 130 },

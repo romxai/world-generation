@@ -60,6 +60,23 @@ interface WorldMapProps {
   moistureScale?: number;
   elevationPersistence?: number;
   moisturePersistence?: number;
+  // Temperature parameters
+  temperatureParams?: {
+    equatorPosition: number;
+    temperatureVariance: number;
+    elevationEffect: number;
+    polarTemperature?: number;
+    equatorTemperature?: number;
+    bandScale: number;
+  };
+  // Radial gradient parameters for ocean effect
+  radialGradientParams?: {
+    centerX: number;
+    centerY: number;
+    radius: number;
+    falloffExponent: number;
+    strength: number;
+  };
 }
 
 interface CameraState {
@@ -85,6 +102,21 @@ const WorldMap: React.FC<WorldMapProps> = ({
   moistureScale = DEFAULT_MOISTURE_SCALE,
   elevationPersistence = DEFAULT_OCTAVE_WEIGHT,
   moisturePersistence = DEFAULT_OCTAVE_WEIGHT,
+  // Temperature parameters
+  temperatureParams = {
+    equatorPosition: DEFAULT_EQUATOR_POSITION,
+    temperatureVariance: DEFAULT_TEMPERATURE_VARIANCE,
+    elevationEffect: DEFAULT_ELEVATION_TEMP_EFFECT,
+    bandScale: 1.0,
+  },
+  // Radial gradient parameters for ocean effect
+  radialGradientParams = {
+    centerX: 0.5,
+    centerY: 0.5,
+    radius: 0.5,
+    falloffExponent: 2.0,
+    strength: 0.5,
+  },
 }) => {
   // Canvas and rendering references
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -104,17 +136,6 @@ const WorldMap: React.FC<WorldMapProps> = ({
     x: 0,
     y: 0,
   });
-
-  // Temperature parameters state
-  const [equatorPosition, setEquatorPosition] = useState(
-    DEFAULT_EQUATOR_POSITION
-  );
-  const [temperatureVariance, setTemperatureVariance] = useState(
-    DEFAULT_TEMPERATURE_VARIANCE
-  );
-  const [elevationTempEffect, setElevationTempEffect] = useState(
-    DEFAULT_ELEVATION_TEMP_EFFECT
-  );
 
   // Visualization state
   const [currentVisualizationMode, setVisualizationMode] =
@@ -137,12 +158,14 @@ const WorldMap: React.FC<WorldMapProps> = ({
       elevationPersistence,
       moisturePersistence,
       temperatureParams: {
-        equatorPosition,
-        temperatureVariance,
-        elevationEffect: elevationTempEffect,
+        equatorPosition: temperatureParams.equatorPosition,
+        temperatureVariance: temperatureParams.temperatureVariance,
+        elevationEffect: temperatureParams.elevationEffect,
         polarTemperature: 0.0,
         equatorTemperature: 1.0,
+        bandScale: temperatureParams.bandScale,
       },
+      radialGradientParams: radialGradientParams,
     })
   );
 
@@ -157,12 +180,14 @@ const WorldMap: React.FC<WorldMapProps> = ({
       elevationPersistence,
       moisturePersistence,
       temperatureParams: {
-        equatorPosition,
-        temperatureVariance,
-        elevationEffect: elevationTempEffect,
+        equatorPosition: temperatureParams.equatorPosition,
+        temperatureVariance: temperatureParams.temperatureVariance,
+        elevationEffect: temperatureParams.elevationEffect,
         polarTemperature: 0.0,
         equatorTemperature: 1.0,
+        bandScale: temperatureParams.bandScale,
       },
+      radialGradientParams: radialGradientParams,
     });
     setMapChanged(true);
   }, [
@@ -173,9 +198,8 @@ const WorldMap: React.FC<WorldMapProps> = ({
     moistureScale,
     elevationPersistence,
     moisturePersistence,
-    equatorPosition,
-    temperatureVariance,
-    elevationTempEffect,
+    temperatureParams,
+    radialGradientParams,
   ]);
 
   // Re-render map when visualization mode or biome weights change
@@ -555,7 +579,7 @@ const WorldMap: React.FC<WorldMapProps> = ({
             htmlFor="equatorPosition"
             style={{ display: "block", marginBottom: "5px" }}
           >
-            Equator Position: {equatorPosition.toFixed(2)}
+            Equator Position: {temperatureParams.equatorPosition.toFixed(2)}
           </label>
           <input
             id="equatorPosition"
@@ -563,8 +587,16 @@ const WorldMap: React.FC<WorldMapProps> = ({
             min="0"
             max="1"
             step="0.01"
-            value={equatorPosition}
-            onChange={(e) => setEquatorPosition(parseFloat(e.target.value))}
+            value={temperatureParams.equatorPosition}
+            onChange={(e) =>
+              setCamera((prevCamera) => ({
+                ...prevCamera,
+                temperatureParams: {
+                  ...temperatureParams,
+                  equatorPosition: parseFloat(e.target.value),
+                },
+              }))
+            }
             style={{ width: "100%" }}
           />
         </div>
@@ -574,7 +606,8 @@ const WorldMap: React.FC<WorldMapProps> = ({
             htmlFor="temperatureVariance"
             style={{ display: "block", marginBottom: "5px" }}
           >
-            Temperature Variance: {temperatureVariance.toFixed(2)}
+            Temperature Variance:{" "}
+            {temperatureParams.temperatureVariance.toFixed(2)}
           </label>
           <input
             id="temperatureVariance"
@@ -582,8 +615,16 @@ const WorldMap: React.FC<WorldMapProps> = ({
             min="0"
             max="0.5"
             step="0.01"
-            value={temperatureVariance}
-            onChange={(e) => setTemperatureVariance(parseFloat(e.target.value))}
+            value={temperatureParams.temperatureVariance}
+            onChange={(e) =>
+              setCamera((prevCamera) => ({
+                ...prevCamera,
+                temperatureParams: {
+                  ...temperatureParams,
+                  temperatureVariance: parseFloat(e.target.value),
+                },
+              }))
+            }
             style={{ width: "100%" }}
           />
         </div>
@@ -593,7 +634,8 @@ const WorldMap: React.FC<WorldMapProps> = ({
             htmlFor="elevationTempEffect"
             style={{ display: "block", marginBottom: "5px" }}
           >
-            Elevation Effect: {elevationTempEffect.toFixed(2)}
+            Elevation Effect on Temperature:{" "}
+            {temperatureParams.elevationEffect.toFixed(2)}
           </label>
           <input
             id="elevationTempEffect"
@@ -601,8 +643,16 @@ const WorldMap: React.FC<WorldMapProps> = ({
             min="0"
             max="1"
             step="0.01"
-            value={elevationTempEffect}
-            onChange={(e) => setElevationTempEffect(parseFloat(e.target.value))}
+            value={temperatureParams.elevationEffect}
+            onChange={(e) =>
+              setCamera((prevCamera) => ({
+                ...prevCamera,
+                temperatureParams: {
+                  ...temperatureParams,
+                  elevationEffect: parseFloat(e.target.value),
+                },
+              }))
+            }
             style={{ width: "100%" }}
           />
         </div>

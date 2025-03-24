@@ -16,6 +16,7 @@ import {
   getBiomeType,
   getElevationColor,
   getMoistureColor,
+  BiomeData,
 } from "./biomeMapper";
 import { getTerrainTypeForHeight, getTerrainColor } from "./terrainUtils";
 import {
@@ -23,6 +24,11 @@ import {
   getTemperatureColor,
   TemperatureParams,
 } from "./temperatureMapper";
+import {
+  RadialGradientParams,
+  applyRadialGradient,
+  DEFAULT_RADIAL_PARAMS,
+} from "./radialUtils";
 
 /**
  * Interface for tile data in the world
@@ -49,6 +55,7 @@ export interface WorldGeneratorConfig {
   elevationPersistence: number;
   moisturePersistence: number;
   temperatureParams: TemperatureParams;
+  radialGradientParams: RadialGradientParams;
 }
 
 /**
@@ -63,7 +70,11 @@ export class WorldGenerator {
    * Create a new world generator with the specified configuration
    */
   constructor(config: WorldGeneratorConfig) {
-    this.config = config;
+    this.config = {
+      ...config,
+      radialGradientParams:
+        config.radialGradientParams || DEFAULT_RADIAL_PARAMS,
+    };
 
     // Create noise generators for elevation and moisture
     this.elevationNoise = createElevationNoise(
@@ -91,7 +102,13 @@ export class WorldGenerator {
    * Update the configuration of the world generator
    */
   updateConfig(newConfig: Partial<WorldGeneratorConfig>): void {
-    // Update stored config
+    if (newConfig.radialGradientParams) {
+      this.config.radialGradientParams = {
+        ...this.config.radialGradientParams,
+        ...newConfig.radialGradientParams,
+      };
+    }
+
     this.config = { ...this.config, ...newConfig };
 
     // If seed changed, recreate both noise generators
@@ -104,51 +121,85 @@ export class WorldGenerator {
         this.config.seed,
         this.config.moistureOctaves
       );
-    }
 
-    // Update elevation noise parameters if needed
-    if (
-      newConfig.elevationOctaves !== undefined ||
-      newConfig.elevationScale !== undefined ||
-      newConfig.elevationPersistence !== undefined
-    ) {
+      // Re-apply the scale and persistence settings
       this.elevationNoise.updateParams({
-        octaveCount: this.config.elevationOctaves,
         scale: this.config.elevationScale,
         persistence: this.config.elevationPersistence,
       });
-    }
-
-    // Update moisture noise parameters if needed
-    if (
-      newConfig.moistureOctaves !== undefined ||
-      newConfig.moistureScale !== undefined ||
-      newConfig.moisturePersistence !== undefined
-    ) {
       this.moistureNoise.updateParams({
-        octaveCount: this.config.moistureOctaves,
         scale: this.config.moistureScale,
         persistence: this.config.moisturePersistence,
       });
+    } else {
+      // Otherwise just update the parameters that might have changed
+      if (
+        newConfig.elevationOctaves !== undefined ||
+        newConfig.elevationScale !== undefined ||
+        newConfig.elevationPersistence !== undefined
+      ) {
+        // If octaves changed, we need to recreate the noise generator
+        if (newConfig.elevationOctaves !== undefined) {
+          this.elevationNoise = createElevationNoise(
+            this.config.seed,
+            this.config.elevationOctaves
+          );
+        }
+
+        // Update parameters that might have changed
+        this.elevationNoise.updateParams({
+          scale: this.config.elevationScale,
+          persistence: this.config.elevationPersistence,
+        });
+      }
+
+      if (
+        newConfig.moistureOctaves !== undefined ||
+        newConfig.moistureScale !== undefined ||
+        newConfig.moisturePersistence !== undefined
+      ) {
+        // If octaves changed, we need to recreate the noise generator
+        if (newConfig.moistureOctaves !== undefined) {
+          this.moistureNoise = createMoistureNoise(
+            this.config.seed,
+            this.config.moistureOctaves
+          );
+        }
+
+        // Update parameters that might have changed
+        this.moistureNoise.updateParams({
+          scale: this.config.moistureScale,
+          persistence: this.config.moisturePersistence,
+        });
+      }
     }
   }
 
   /**
-   * Get elevation value at the specified world coordinates
+   * Get the elevation value at a specific coordinate
    */
   getElevation(x: number, y: number): number {
-    return this.elevationNoise.get(x, y);
+    // Get raw elevation from noise
+    const rawElevation = this.elevationNoise.get(x, y);
+
+    // Apply radial gradient effect to create ocean borders
+    return applyRadialGradient(
+      x,
+      y,
+      rawElevation,
+      this.config.radialGradientParams
+    );
   }
 
   /**
-   * Get moisture value at the specified world coordinates
+   * Get the moisture value at a specific coordinate
    */
   getMoisture(x: number, y: number): number {
     return this.moistureNoise.get(x, y);
   }
 
   /**
-   * Get temperature value at the specified world coordinates
+   * Get the temperature value at a specific coordinate
    */
   getTemperature(x: number, y: number, elevation: number): number {
     return calculateTemperature(x, y, elevation, this.config.temperatureParams);

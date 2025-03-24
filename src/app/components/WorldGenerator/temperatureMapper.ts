@@ -30,6 +30,7 @@ export interface TemperatureParams {
   polarTemperature?: number; // Base temperature at poles (0-1, default 0.1)
   equatorTemperature?: number; // Base temperature at equator (0-1, default 0.9)
   elevationEffect?: number; // How much elevation affects temperature (0-1, default 0.3)
+  bandScale?: number; // Scale factor for temperature bands (1.0 = normal)
 }
 
 /**
@@ -41,6 +42,7 @@ export const DEFAULT_TEMPERATURE_PARAMS: TemperatureParams = {
   polarTemperature: 0.1, // Cold poles
   equatorTemperature: 0.9, // Hot equator
   elevationEffect: 0.3, // Higher elevation = cooler temperature
+  bandScale: 1.0, // Default scale factor for temperature bands
 };
 
 /**
@@ -56,10 +58,18 @@ export function calculateBaseTemperature(
   const equatorPos = params.equatorPosition || 0.5;
   const polarTemp = params.polarTemperature || 0.1;
   const equatorTemp = params.equatorTemperature || 0.9;
+  const bandScale = params.bandScale || 1.0;
 
   // Calculate distance from equator (0 = at equator, 1 = at pole)
-  const distanceFromEquator =
+  let distanceFromEquator =
     Math.abs(latitude - equatorPos) / Math.max(equatorPos, 1 - equatorPos);
+
+  // Apply band scaling - higher values make the bands narrower (more extreme temperatures)
+  // Lower values make the bands wider (more moderate temperatures)
+  if (bandScale !== 1.0) {
+    // Ensure distance stays in [0, 1] range
+    distanceFromEquator = Math.pow(distanceFromEquator, 1 / bandScale);
+  }
 
   // Temperature decreases as you move away from the equator (cosine pattern)
   const temperatureFactor = Math.cos((distanceFromEquator * Math.PI) / 2);
@@ -100,74 +110,65 @@ export function calculateTemperature(
   elevation: number,
   params: TemperatureParams = DEFAULT_TEMPERATURE_PARAMS
 ): number {
-  // Get latitude and calculate base temperature
+  // Get the latitude (0-1, where 0 is south pole, 1 is north pole)
   const latitude = getLatitude(y);
+
+  // Calculate base temperature based on latitude
   let temperature = calculateBaseTemperature(latitude, params);
 
-  // Add random variation for more natural patterns
-  const elevationEffect = params.elevationEffect || 0.3;
+  // Add some random variation
   const variance = params.temperatureVariance || 0.2;
+  temperature += (Math.random() * 2 - 1) * variance * 0.1;
 
-  // Higher elevation means cooler temperature
+  // Higher elevation means colder temperature
+  const elevationEffect = params.elevationEffect || 0.3;
   temperature -= elevation * elevationEffect;
 
-  // Add some random variance (could be based on longitude or other factors)
-  const longitudeFactor = Math.sin(getLongitude(x) * Math.PI * 2);
-  temperature += longitudeFactor * variance * 0.8;
-
-  // Clamp temperature to valid range
+  // Ensure temperature is in the valid range [0, 1]
   return Math.max(0, Math.min(1, temperature));
 }
 
 /**
- * Get a color representing the temperature for visualization
+ * Get a color representation of a temperature value
  * @param temperature Temperature value (0-1)
- * @returns RGB color representing the temperature
+ * @returns RGB color object
  */
 export function getTemperatureColor(temperature: number): {
   r: number;
   g: number;
   b: number;
 } {
-  // Temperature gradient from blue (cold) to red (hot)
-  if (temperature < 0.2) {
-    // Blue to cyan (coldest)
-    return {
-      r: 0,
-      g: Math.floor(200 * (temperature / 0.2)),
-      b: 255,
-    };
-  } else if (temperature < 0.4) {
-    // Cyan to green (cold)
-    const factor = (temperature - 0.2) / 0.2;
-    return {
-      r: 0,
-      g: 200 + Math.floor(55 * factor),
-      b: 255 - Math.floor(255 * factor),
-    };
-  } else if (temperature < 0.6) {
-    // Green to yellow (mild)
-    const factor = (temperature - 0.4) / 0.2;
-    return {
-      r: Math.floor(255 * factor),
-      g: 255,
-      b: 0,
-    };
-  } else if (temperature < 0.8) {
-    // Yellow to orange (warm)
-    const factor = (temperature - 0.6) / 0.2;
-    return {
-      r: 255,
-      g: 255 - Math.floor(155 * factor),
-      b: 0,
-    };
+  // Cold: Blue (0, 100, 255)
+  // Mild: Green (0, 255, 0)
+  // Hot: Red (255, 0, 0)
+
+  let r, g, b;
+
+  if (temperature < 0.25) {
+    // Cold: Deep blue to lighter blue
+    const t = temperature / 0.25;
+    r = 0;
+    g = Math.floor(100 + t * 100);
+    b = 255;
+  } else if (temperature < 0.5) {
+    // Cool: Blue-green to green
+    const t = (temperature - 0.25) / 0.25;
+    r = 0;
+    g = Math.floor(200 + t * 55);
+    b = Math.floor(255 - t * 255);
+  } else if (temperature < 0.75) {
+    // Warm: Green to yellow
+    const t = (temperature - 0.5) / 0.25;
+    r = Math.floor(t * 255);
+    g = 255;
+    b = 0;
   } else {
-    // Orange to red (hot)
-    const factor = (temperature - 0.8) / 0.2;
-    return {
-      r: 255,
-      g: 100 - Math.floor(100 * factor),
-      b: Math.floor(100 * factor), // Adding a bit of blue for purple at the highest temps
-    };
+    // Hot: Yellow to red
+    const t = (temperature - 0.75) / 0.25;
+    r = 255;
+    g = Math.floor(255 - t * 255);
+    b = 0;
   }
+
+  return { r, g, b };
 }
