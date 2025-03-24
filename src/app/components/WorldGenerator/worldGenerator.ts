@@ -5,7 +5,15 @@
  * noise to produce a complete world map with various biomes.
  */
 
-import { BiomeType, RGB, TerrainType, VisualizationMode } from "./config";
+import {
+  BiomeType,
+  RGB,
+  TerrainType,
+  VisualizationMode,
+  DEFAULT_RADIAL_PARAMS,
+  TemperatureParams,
+  RadialGradientParams,
+} from "./config";
 import {
   OctaveNoise,
   createElevationNoise,
@@ -19,16 +27,8 @@ import {
   BiomeData,
 } from "./biomeMapper";
 import { getTerrainTypeForHeight, getTerrainColor } from "./terrainUtils";
-import {
-  getTemperatureColor,
-  TemperatureParams,
-  TemperatureMapper,
-} from "./temperatureMapper";
-import {
-  RadialGradientParams,
-  applyRadialGradient,
-  DEFAULT_RADIAL_PARAMS,
-} from "./radialUtils";
+import { getTemperatureColor, TemperatureMapper } from "./temperatureMapper";
+import { applyRadialGradient } from "./radialUtils";
 
 /**
  * Interface for tile data in the world
@@ -56,6 +56,8 @@ export interface WorldGeneratorConfig {
   moisturePersistence: number;
   temperatureParams: TemperatureParams;
   radialGradientParams: RadialGradientParams;
+  moistureThresholds?: any; // Using 'any' temporarily, ideally should be properly typed
+  temperatureThresholds?: any; // Using 'any' temporarily, ideally should be properly typed
 }
 
 /**
@@ -66,6 +68,8 @@ export class WorldGenerator {
   private moistureNoise: OctaveNoise;
   private config: WorldGeneratorConfig;
   private temperatureMapper: TemperatureMapper;
+  private moistureThresholds: any; // Using 'any' temporarily
+  private temperatureThresholds: any; // Using 'any' temporarily
 
   /**
    * Create a new world generator with the specified configuration
@@ -76,6 +80,10 @@ export class WorldGenerator {
       radialGradientParams:
         config.radialGradientParams || DEFAULT_RADIAL_PARAMS,
     };
+
+    // Store thresholds
+    this.moistureThresholds = config.moistureThresholds || {};
+    this.temperatureThresholds = config.temperatureThresholds || {};
 
     // Create noise generators for elevation and moisture
     this.elevationNoise = createElevationNoise(
@@ -107,14 +115,17 @@ export class WorldGenerator {
    */
   updateConfig(newConfig: Partial<WorldGeneratorConfig>): void {
     // Update the stored configuration
-    Object.assign(this.config, newConfig);
+    this.config = {
+      ...this.config,
+      ...newConfig,
+    };
 
-    // Update radial gradient parameters if provided
-    if (newConfig.radialGradientParams) {
-      this.config.radialGradientParams = {
-        ...this.config.radialGradientParams,
-        ...newConfig.radialGradientParams,
-      };
+    // Store thresholds if provided
+    if (newConfig.moistureThresholds) {
+      this.moistureThresholds = newConfig.moistureThresholds;
+    }
+    if (newConfig.temperatureThresholds) {
+      this.temperatureThresholds = newConfig.temperatureThresholds;
     }
 
     // If seed changed, recreate the noise generators
@@ -228,22 +239,26 @@ export class WorldGenerator {
   }
 
   /**
-   * Get comprehensive biome data at the specified coordinates
+   * Get complete biome data for a specific position
    */
   getBiomeData(x: number, y: number): BiomeData {
-    // Get base elevation and moisture values
+    // Get raw elevation and moisture values
     const elevation = this.getElevation(x, y);
     const moisture = this.getMoisture(x, y);
 
-    // Calculate temperature based on elevation and latitude
+    // Calculate temperature based on elevation and position
     const temperature = this.getTemperature(x, y, elevation);
 
+    // Return comprehensive data object
     return {
-      x,
-      y,
       elevation,
       moisture,
       temperature,
+      x,
+      y,
+      // Add threshold data for biome determination
+      moistureThresholds: this.moistureThresholds,
+      temperatureThresholds: this.temperatureThresholds,
     };
   }
 

@@ -26,11 +26,82 @@ export const DEFAULT_OCTAVE_WEIGHT = 0.45; // Default weight for each octave
 export const DEFAULT_MOISTURE_SCALE = 200; // Default scale for moisture noise (higher = larger features)
 export const DEFAULT_ELEVATION_SCALE = 200; // Default scale for elevation noise (higher = larger features)
 
-// Temperature & climate settings
+// Temperature & climate parameters
+export interface TemperatureParams {
+  equatorPosition?: number; // Where the equator is located (0-1, default 0.5)
+  temperatureVariance?: number; // How much regional temperature varies (0-1, default 0.2)
+  polarTemperature?: number; // Base temperature at poles (0-1, default 0.1)
+  equatorTemperature?: number; // Base temperature at equator (0-1, default 0.9)
+  elevationEffect?: number; // How much elevation affects temperature (0-1, default 0.3)
+  bandScale?: number; // Scale factor for temperature bands (1.0 = normal)
+  noiseSeed?: number; // Seed for regional temperature variations
+  noiseScale?: number; // Scale of regional temperature variations
+  noiseOctaves?: number; // Number of octaves for regional variations
+  noisePersistence?: number; // Persistence for regional variations
+}
+
+// Temperature zones constants
+export const TEMPERATURE_ZONES = {
+  // Temperature ranges (0-1)
+  FREEZING: 0.0,
+  COLD: 0.25,
+  COOL: 0.4,
+  MILD: 0.5,
+  WARM: 0.65,
+  HOT: 0.8,
+  SCORCHING: 1.0,
+};
+
+// Default temperature settings
 export const DEFAULT_EQUATOR_POSITION = 0.5; // Where the equator is located (0-1)
-export const DEFAULT_TEMPERATURE_VARIANCE = 0.2; // Random variation in temperature
-export const DEFAULT_ELEVATION_TEMP_EFFECT = 0.2; // How much elevation cools temperature
+export const DEFAULT_TEMPERATURE_VARIANCE = 0.08; // Regional variance for realism (reduced for smoother maps)
+export const DEFAULT_ELEVATION_TEMP_EFFECT = 0.25; // How much elevation cools temperature
 export const DEFAULT_TEMPERATURE_BAND_SCALE = 1.0; // Scale factor for temperature bands (1.0 = normal)
+export const DEFAULT_POLAR_TEMPERATURE = 0.1; // Cold poles
+export const DEFAULT_EQUATOR_TEMPERATURE = 0.9; // Hot equator
+export const DEFAULT_TEMPERATURE_NOISE_SEED = 12345; // Default seed for regional variations
+export const DEFAULT_TEMPERATURE_NOISE_SCALE = 8.0; // Scale for smoother regional temperature variations
+export const DEFAULT_TEMPERATURE_NOISE_OCTAVES = 2; // Fewer octaves for smoother variations
+export const DEFAULT_TEMPERATURE_NOISE_PERSISTENCE = 0.4; // Lower persistence for smoother gradients
+
+// Combined temperature parameters
+export const DEFAULT_TEMPERATURE_PARAMS: TemperatureParams = {
+  equatorPosition: DEFAULT_EQUATOR_POSITION,
+  temperatureVariance: DEFAULT_TEMPERATURE_VARIANCE,
+  polarTemperature: DEFAULT_POLAR_TEMPERATURE,
+  equatorTemperature: DEFAULT_EQUATOR_TEMPERATURE,
+  elevationEffect: DEFAULT_ELEVATION_TEMP_EFFECT,
+  bandScale: DEFAULT_TEMPERATURE_BAND_SCALE,
+  noiseSeed: DEFAULT_TEMPERATURE_NOISE_SEED,
+  noiseScale: DEFAULT_TEMPERATURE_NOISE_SCALE,
+  noiseOctaves: DEFAULT_TEMPERATURE_NOISE_OCTAVES,
+  noisePersistence: DEFAULT_TEMPERATURE_NOISE_PERSISTENCE,
+};
+
+// Radial gradient parameters
+export interface RadialGradientParams {
+  centerX?: number; // Center X position (0-1, default 0.5)
+  centerY?: number; // Center Y position (0-1, default 0.5)
+  radius?: number; // Normalized radius of the inner area (0-1, default 0.6)
+  falloffExponent?: number; // Controls how sharp the transition is (default 3)
+  strength?: number; // Overall strength of the effect (0-1, default 0.7)
+}
+
+// Default radial gradient settings
+export const DEFAULT_RADIAL_CENTER_X = 0.5; // Center of the map
+export const DEFAULT_RADIAL_CENTER_Y = 0.5; // Center of the map
+export const DEFAULT_RADIAL_RADIUS = 0.6; // Inner radius covers 60% of the map
+export const DEFAULT_RADIAL_FALLOFF_EXPONENT = 3; // Cubic falloff for smoother transition
+export const DEFAULT_RADIAL_STRENGTH = 0.7; // 70% strength, balanced effect
+
+// Combined radial gradient parameters
+export const DEFAULT_RADIAL_PARAMS: RadialGradientParams = {
+  centerX: DEFAULT_RADIAL_CENTER_X,
+  centerY: DEFAULT_RADIAL_CENTER_Y,
+  radius: DEFAULT_RADIAL_RADIUS,
+  falloffExponent: DEFAULT_RADIAL_FALLOFF_EXPONENT,
+  strength: DEFAULT_RADIAL_STRENGTH,
+};
 
 // Camera and zoom settings
 export const INITIAL_ZOOM = 0.09; // Starting zoom level (1.0 = 100%)
@@ -316,7 +387,102 @@ export const DEBUG_MODE = true; // Enable or disable debug information
 export const SHOW_GRID = true; // Show grid lines in debug mode
 export const SHOW_COORDS = true; // Show coordinates in debug mode
 
-import { DEFAULT_TEMPERATURE_PARAMS } from "./temperatureMapper";
+// Function to collect all configuration parameters for exporting
+export interface ExportedConfig {
+  // Basic settings
+  seed: number;
+  tileSize: number;
 
-// Export temperature parameters for use in UI components
-export { DEFAULT_TEMPERATURE_PARAMS };
+  // Noise settings
+  noiseDetail: number;
+  noiseFalloff: number;
+  elevationOctaves: number;
+  moistureOctaves: number;
+  elevationScale: number;
+  moistureScale: number;
+  elevationPersistence: number;
+  moisturePersistence: number;
+
+  // Temperature settings
+  temperatureParams: TemperatureParams;
+
+  // Radial gradient settings
+  radialGradientParams: RadialGradientParams;
+
+  // Biome weights
+  biomeWeights: number[];
+
+  // Thresholds
+  moistureThresholds: typeof MOISTURE_THRESHOLDS;
+  temperatureThresholds: typeof TEMPERATURE_THRESHOLDS;
+}
+
+/**
+ * Create a configuration object with the current settings
+ */
+export function createConfigObject(
+  params: Partial<ExportedConfig>
+): ExportedConfig {
+  return {
+    // Basic settings with defaults
+    seed: params.seed || DEFAULT_SEED,
+    tileSize: params.tileSize || DEFAULT_TILE_SIZE,
+
+    // Noise settings with defaults
+    noiseDetail: params.noiseDetail || NOISE_DETAIL,
+    noiseFalloff: params.noiseFalloff || NOISE_FALLOFF,
+    elevationOctaves: params.elevationOctaves || DEFAULT_OCTAVES,
+    moistureOctaves: params.moistureOctaves || DEFAULT_OCTAVES,
+    elevationScale: params.elevationScale || DEFAULT_ELEVATION_SCALE,
+    moistureScale: params.moistureScale || DEFAULT_MOISTURE_SCALE,
+    elevationPersistence: params.elevationPersistence || DEFAULT_OCTAVE_WEIGHT,
+    moisturePersistence: params.moisturePersistence || DEFAULT_OCTAVE_WEIGHT,
+
+    // Temperature settings with defaults
+    temperatureParams: {
+      ...DEFAULT_TEMPERATURE_PARAMS,
+      ...(params.temperatureParams || {}),
+    },
+
+    // Radial gradient settings with defaults
+    radialGradientParams: {
+      ...DEFAULT_RADIAL_PARAMS,
+      ...(params.radialGradientParams || {}),
+    },
+
+    // Biome weights with defaults
+    biomeWeights: params.biomeWeights || BIOME_PRESETS.WORLD,
+
+    // Thresholds with defaults
+    moistureThresholds: params.moistureThresholds || MOISTURE_THRESHOLDS,
+    temperatureThresholds:
+      params.temperatureThresholds || TEMPERATURE_THRESHOLDS,
+  };
+}
+
+/**
+ * Export configuration as a downloadable JSON file
+ */
+export function exportConfigAsFile(config: ExportedConfig): void {
+  // Create a JSON string with pretty formatting
+  const configJson = JSON.stringify(config, null, 2);
+
+  // Create a blob from the JSON
+  const blob = new Blob([configJson], { type: "application/json" });
+
+  // Create a download link
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `world-config-${config.seed}.json`;
+
+  // Append to document, click to download, then remove
+  document.body.appendChild(link);
+  link.click();
+
+  // Clean up
+  setTimeout(() => {
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }, 100);
+}

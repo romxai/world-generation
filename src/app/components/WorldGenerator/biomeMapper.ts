@@ -29,7 +29,6 @@ export const ELEVATION_BANDS = {
   VERY_HIGH: 0.9, // Very high elevation (peaks)
 };
 
-
 /**
  * Interface to store elevation, moisture, and temperature data
  */
@@ -39,6 +38,8 @@ export interface BiomeData {
   temperature: number;
   x: number;
   y: number;
+  moistureThresholds?: any; // Using 'any' temporarily
+  temperatureThresholds?: any; // Using 'any' temporarily
 }
 
 /**
@@ -57,6 +58,11 @@ export function getBiomeColor(biome: BiomeType): RGB {
  */
 export function getBiomeType(data: BiomeData): BiomeType {
   const { elevation, moisture, temperature } = data;
+
+  // Use custom thresholds if provided, otherwise use defaults
+  const moistureThresholds = data.moistureThresholds || MOISTURE_THRESHOLDS;
+  const temperatureThresholds =
+    data.temperatureThresholds || TEMPERATURE_THRESHOLDS;
 
   // Deep water biomes - only affected by elevation, not moisture or temperature
   if (elevation < ELEVATION_BANDS.WATER_DEEP) {
@@ -78,8 +84,8 @@ export function getBiomeType(data: BiomeData): BiomeType {
     // Rocky shores more common in colder areas or areas with high moisture
     // Sandy beaches in warmer and drier areas
     if (
-      temperature < TEMPERATURE_THRESHOLDS.MILD ||
-      moisture > MOISTURE_THRESHOLDS.WET
+      temperature < temperatureThresholds.MILD ||
+      moisture > moistureThresholds.WET
     ) {
       return BiomeType.ROCKY_SHORE;
     } else {
@@ -90,22 +96,22 @@ export function getBiomeType(data: BiomeData): BiomeType {
   // Low elevation biomes - highly affected by moisture and temperature
   if (elevation < ELEVATION_BANDS.LOW) {
     // Very cold regions - Tundra regardless of moisture
-    if (temperature < TEMPERATURE_THRESHOLDS.FREEZING) {
+    if (temperature < temperatureThresholds.FREEZING) {
       return BiomeType.TUNDRA;
     }
 
     // Cold regions - Taiga for wet areas, Tundra for dry
-    if (temperature < TEMPERATURE_THRESHOLDS.COLD) {
-      return moisture < MOISTURE_THRESHOLDS.MEDIUM
+    if (temperature < temperatureThresholds.COLD) {
+      return moisture < moistureThresholds.MEDIUM
         ? BiomeType.TUNDRA
         : BiomeType.TAIGA;
     }
 
     // Cool regions
-    if (temperature < TEMPERATURE_THRESHOLDS.COOL) {
-      if (moisture < MOISTURE_THRESHOLDS.DRY) {
+    if (temperature < temperatureThresholds.COOL) {
+      if (moisture < moistureThresholds.DRY) {
         return BiomeType.TEMPERATE_DESERT;
-      } else if (moisture < MOISTURE_THRESHOLDS.WET) {
+      } else if (moisture < moistureThresholds.WET) {
         return BiomeType.SHRUBLAND; // Reduced band
       } else {
         return BiomeType.TAIGA; // Reduced band
@@ -113,12 +119,12 @@ export function getBiomeType(data: BiomeData): BiomeType {
     }
 
     // Mild regions
-    if (temperature < TEMPERATURE_THRESHOLDS.WARM) {
-      if (moisture < MOISTURE_THRESHOLDS.DRY) {
+    if (temperature < temperatureThresholds.WARM) {
+      if (moisture < moistureThresholds.DRY) {
         return BiomeType.TEMPERATE_DESERT;
-      } else if (moisture < MOISTURE_THRESHOLDS.MEDIUM) {
+      } else if (moisture < moistureThresholds.MEDIUM) {
         return BiomeType.GRASSLAND;
-      } else if (moisture < MOISTURE_THRESHOLDS.WET) {
+      } else if (moisture < moistureThresholds.WET) {
         return BiomeType.TEMPERATE_DECIDUOUS_FOREST;
       } else {
         return BiomeType.TEMPERATE_GRASSLAND;
@@ -126,11 +132,11 @@ export function getBiomeType(data: BiomeData): BiomeType {
     }
 
     // Hot regions
-    if (temperature > TEMPERATURE_THRESHOLDS.WARM) {
+    if (temperature > temperatureThresholds.WARM) {
       // From dry to wet: desert -> seasonal forest -> rainforest
-      if (moisture < MOISTURE_THRESHOLDS.DRY) {
+      if (moisture < moistureThresholds.DRY) {
         return BiomeType.SUBTROPICAL_DESERT;
-      } else if (moisture < MOISTURE_THRESHOLDS.WET) {
+      } else if (moisture < moistureThresholds.WET) {
         return BiomeType.TROPICAL_SEASONAL_FOREST;
       } else {
         return BiomeType.TROPICAL_RAINFOREST;
@@ -141,22 +147,22 @@ export function getBiomeType(data: BiomeData): BiomeType {
   // Medium elevation biomes - affected by temperature and moisture but less variety
   if (elevation < ELEVATION_BANDS.HIGH) {
     // Temperature primarily affects vegetation type
-    if (temperature < TEMPERATURE_THRESHOLDS.FREEZING) {
+    if (temperature < temperatureThresholds.FREEZING) {
       return BiomeType.TUNDRA; // Updated to tundra for the coldest regions
-    } else if (temperature < TEMPERATURE_THRESHOLDS.COLD) {
-      return moisture < MOISTURE_THRESHOLDS.MEDIUM
+    } else if (temperature < temperatureThresholds.COLD) {
+      return moisture < moistureThresholds.MEDIUM
         ? BiomeType.TUNDRA // Expanded tundra in cold dry regions
         : BiomeType.TAIGA; // Reduced taiga band
-    } else if (temperature < TEMPERATURE_THRESHOLDS.MILD) {
-      if (moisture < MOISTURE_THRESHOLDS.MEDIUM) {
+    } else if (temperature < temperatureThresholds.MILD) {
+      if (moisture < moistureThresholds.MEDIUM) {
         return BiomeType.SHRUBLAND; // Reduced shrubland band
       } else {
         return BiomeType.TEMPERATE_DECIDUOUS_FOREST;
       }
     } else {
-      if (moisture < MOISTURE_THRESHOLDS.MEDIUM) {
+      if (moisture < moistureThresholds.MEDIUM) {
         return BiomeType.SUBTROPICAL_DESERT;
-      } else if (moisture < MOISTURE_THRESHOLDS.WET) {
+      } else if (moisture < moistureThresholds.WET) {
         return BiomeType.TROPICAL_SEASONAL_FOREST;
       } else {
         return BiomeType.TROPICAL_RAINFOREST;
@@ -166,12 +172,12 @@ export function getBiomeType(data: BiomeData): BiomeType {
 
   // High elevation biomes - mostly affected by temperature
   if (elevation < ELEVATION_BANDS.VERY_HIGH) {
-    if (temperature < TEMPERATURE_THRESHOLDS.FREEZING) {
+    if (temperature < temperatureThresholds.FREEZING) {
       return BiomeType.SNOW;
-    } else if (temperature < TEMPERATURE_THRESHOLDS.COLD) {
+    } else if (temperature < temperatureThresholds.COLD) {
       return BiomeType.TUNDRA; // Increased tundra presence
-    } else if (temperature < TEMPERATURE_THRESHOLDS.MILD) {
-      return moisture < MOISTURE_THRESHOLDS.MEDIUM
+    } else if (temperature < temperatureThresholds.MILD) {
+      return moisture < moistureThresholds.MEDIUM
         ? BiomeType.BARE
         : BiomeType.TAIGA;
     } else {
@@ -180,9 +186,9 @@ export function getBiomeType(data: BiomeData): BiomeType {
   }
 
   // Very high elevation - mountain peaks, etc.
-  if (temperature < TEMPERATURE_THRESHOLDS.COOL) {
+  if (temperature < temperatureThresholds.COOL) {
     return BiomeType.SNOW;
-  } else if (temperature < TEMPERATURE_THRESHOLDS.MILD) {
+  } else if (temperature < temperatureThresholds.MILD) {
     return BiomeType.BARE;
   } else {
     return BiomeType.SCORCHED;

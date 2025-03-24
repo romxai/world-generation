@@ -5,54 +5,14 @@
  * map to improve performance while maintaining realistic climate patterns.
  */
 
-import { WORLD_GRID_HEIGHT, WORLD_GRID_WIDTH } from "./config";
+import {
+  WORLD_GRID_HEIGHT,
+  WORLD_GRID_WIDTH,
+  TemperatureParams,
+  DEFAULT_TEMPERATURE_PARAMS,
+  TEMPERATURE_ZONES,
+} from "./config";
 import { OctaveNoise } from "./octaveNoise";
-
-/**
- * Temperature zones constants
- */
-export const TEMPERATURE_ZONES = {
-  // Temperature ranges (0-1)
-  FREEZING: 0.0,
-  COLD: 0.25,
-  COOL: 0.4,
-  MILD: 0.5,
-  WARM: 0.65,
-  HOT: 0.8,
-  SCORCHING: 1.0,
-};
-
-/**
- * Parameters for temperature calculation
- */
-export interface TemperatureParams {
-  equatorPosition?: number; // Where the equator is located (0-1, default 0.5)
-  temperatureVariance?: number; // How much regional temperature varies (0-1, default 0.2)
-  polarTemperature?: number; // Base temperature at poles (0-1, default 0.1)
-  equatorTemperature?: number; // Base temperature at equator (0-1, default 0.9)
-  elevationEffect?: number; // How much elevation affects temperature (0-1, default 0.3)
-  bandScale?: number; // Scale factor for temperature bands (1.0 = normal)
-  noiseSeed?: number; // Seed for regional temperature variations
-  noiseScale?: number; // Scale of regional temperature variations
-  noiseOctaves?: number; // Number of octaves for regional variations
-  noisePersistence?: number; // Persistence for regional variations
-}
-
-/**
- * Default temperature parameters
- */
-export const DEFAULT_TEMPERATURE_PARAMS: TemperatureParams = {
-  equatorPosition: 0.5, // Middle of the map
-  temperatureVariance: 0.08, // Regional variance for realism (reduced for smoother maps)
-  polarTemperature: 0.1, // Cold poles
-  equatorTemperature: 0.9, // Hot equator
-  elevationEffect: 0.25, // Higher elevation = cooler temperature
-  bandScale: 1.0, // Default scale factor for temperature bands
-  noiseSeed: 12345, // Default seed for regional variations
-  noiseScale: 8.0, // Increased scale for smoother regional temperature variations
-  noiseOctaves: 2, // Fewer octaves for smoother variations
-  noisePersistence: 0.4, // Lower persistence for smoother gradients
-};
 
 /**
  * Class to handle temperature calculations with precomputed heat gradients
@@ -76,10 +36,13 @@ export class TemperatureMapper {
 
     // Create noise generator for regional temperature variations
     this.regionalVariations = new OctaveNoise({
-      seed: this.params.noiseSeed || 12345,
-      octaveCount: this.params.noiseOctaves || 3,
-      scale: this.params.noiseScale || 3.0,
-      persistence: this.params.noisePersistence || 0.5,
+      seed: this.params.noiseSeed || DEFAULT_TEMPERATURE_PARAMS.noiseSeed!,
+      octaveCount:
+        this.params.noiseOctaves || DEFAULT_TEMPERATURE_PARAMS.noiseOctaves!,
+      scale: this.params.noiseScale || DEFAULT_TEMPERATURE_PARAMS.noiseScale!,
+      persistence:
+        this.params.noisePersistence ||
+        DEFAULT_TEMPERATURE_PARAMS.noisePersistence!,
     });
   }
 

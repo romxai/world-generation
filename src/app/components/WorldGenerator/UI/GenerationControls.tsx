@@ -6,12 +6,17 @@
  */
 
 import React, { useState } from "react";
-import { VisualizationMode } from "../config";
+import {
+  MOISTURE_THRESHOLDS,
+  TEMPERATURE_THRESHOLDS,
+  VisualizationMode,
+} from "../config";
 import NoiseControls from "./NoiseControls";
 import ClimateControls from "./ClimateControls";
 import RadialGradientControls from "./RadialGradientControls";
 import BiomeControls from "./BiomeControls";
 import GeneralControls from "./GeneralControls";
+import ThresholdControls from "./ThresholdControls";
 
 interface GenerationControlsProps {
   // Basic properties
@@ -86,6 +91,14 @@ interface GenerationControlsProps {
   // Actions
   generateNewSeed: () => void;
   applyCustomWeights: () => void;
+
+  // Add threshold properties
+  moistureThresholds?: typeof MOISTURE_THRESHOLDS;
+  setMoistureThresholds?: (thresholds: typeof MOISTURE_THRESHOLDS) => void;
+  temperatureThresholds?: typeof TEMPERATURE_THRESHOLDS;
+  setTemperatureThresholds?: (
+    thresholds: typeof TEMPERATURE_THRESHOLDS
+  ) => void;
 }
 
 const GenerationControls: React.FC<GenerationControlsProps> = (props) => {
@@ -259,6 +272,67 @@ const GenerationControls: React.FC<GenerationControlsProps> = (props) => {
                 setCustomWeights={props.setCustomWeights}
                 applyCustomWeights={props.applyCustomWeights}
                 showWeightEditor={props.showWeightEditor}
+              />
+            </div>
+          )}
+        </div>
+
+        {/* Thresholds & Export Section */}
+        <div className="border border-gray-700 rounded-lg overflow-hidden">
+          <button
+            onClick={() => toggleSection("thresholds")}
+            className="w-full flex justify-between items-center p-3 bg-gray-700 hover:bg-gray-600 transition text-left"
+          >
+            <span className="font-medium">
+              Thresholds & Export Configuration
+            </span>
+            <span>{activeSection === "thresholds" ? "▼" : "►"}</span>
+          </button>
+
+          {activeSection === "thresholds" && (
+            <div className="p-3">
+              <ThresholdControls
+                seed={props.seed}
+                tileSize={16} // Default tile size
+                noiseDetail={props.noiseDetail}
+                noiseFalloff={props.noiseFalloff}
+                elevationOctaves={props.elevationOctaves}
+                moistureOctaves={props.moistureOctaves}
+                elevationScale={props.elevationScale}
+                moistureScale={props.moistureScale}
+                elevationPersistence={props.elevationPersistence}
+                moisturePersistence={props.moisturePersistence}
+                temperatureParams={{
+                  equatorPosition: props.equatorPosition,
+                  temperatureVariance: props.temperatureVariance,
+                  elevationEffect: props.elevationTempEffect,
+                  bandScale: props.temperatureBandScale,
+                  noiseScale: props.temperatureNoiseScale,
+                  noiseOctaves: props.temperatureNoiseOctaves,
+                  noisePersistence: props.temperatureNoisePersistence,
+                  polarTemperature: props.polarTemperature,
+                  equatorTemperature: props.equatorTemperature,
+                }}
+                radialGradientParams={{
+                  centerX: props.radialCenterX,
+                  centerY: props.radialCenterY,
+                  radius: props.radialRadius,
+                  falloffExponent: props.radialFalloffExponent,
+                  strength: props.radialStrength,
+                }}
+                biomeWeights={props.biomeWeights}
+                moistureThresholds={
+                  props.moistureThresholds || MOISTURE_THRESHOLDS
+                }
+                setMoistureThresholds={
+                  props.setMoistureThresholds || (() => {})
+                }
+                temperatureThresholds={
+                  props.temperatureThresholds || TEMPERATURE_THRESHOLDS
+                }
+                setTemperatureThresholds={
+                  props.setTemperatureThresholds || (() => {})
+                }
               />
             </div>
           )}

@@ -40,6 +40,8 @@ import {
   DEFAULT_TEMPERATURE_BAND_SCALE,
   DEFAULT_TEMPERATURE_PARAMS,
   RGB,
+  MOISTURE_THRESHOLDS,
+  TEMPERATURE_THRESHOLDS,
 } from "./config";
 import { PerlinNoise, createNoiseGenerator } from "./noiseGenerator";
 import { WorldGenerator, WorldGeneratorConfig } from "./worldGenerator";
@@ -84,6 +86,9 @@ interface WorldMapProps {
     falloffExponent: number;
     strength: number;
   };
+  // Add threshold parameters
+  moistureThresholds?: typeof MOISTURE_THRESHOLDS;
+  temperatureThresholds?: typeof TEMPERATURE_THRESHOLDS;
 }
 
 interface CameraState {
@@ -130,6 +135,9 @@ const WorldMap: React.FC<WorldMapProps> = ({
     falloffExponent: 2.0,
     strength: 0.5,
   },
+  // Add threshold parameters with defaults
+  moistureThresholds = MOISTURE_THRESHOLDS,
+  temperatureThresholds = TEMPERATURE_THRESHOLDS,
 }) => {
   // Canvas and rendering references
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -194,6 +202,8 @@ const WorldMap: React.FC<WorldMapProps> = ({
       moisturePersistence,
       temperatureParams,
       radialGradientParams,
+      moistureThresholds,
+      temperatureThresholds,
     });
     setMapChanged(true);
   }, [
@@ -206,6 +216,8 @@ const WorldMap: React.FC<WorldMapProps> = ({
     moisturePersistence,
     temperatureParams,
     radialGradientParams,
+    moistureThresholds,
+    temperatureThresholds,
   ]);
 
   // Re-render map when visualization mode or biome weights change
