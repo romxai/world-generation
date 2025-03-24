@@ -49,6 +49,17 @@ interface GenerationControlsProps {
   setElevationTempEffect: (value: number) => void;
   temperatureBandScale: number;
   setTemperatureBandScale: (value: number) => void;
+  // New temperature properties (optional)
+  temperatureNoiseScale?: number;
+  setTemperatureNoiseScale?: (value: number) => void;
+  temperatureNoiseOctaves?: number;
+  setTemperatureNoiseOctaves?: (value: number) => void;
+  temperatureNoisePersistence?: number;
+  setTemperatureNoisePersistence?: (value: number) => void;
+  polarTemperature?: number;
+  setPolarTemperature?: (value: number) => void;
+  equatorTemperature?: number;
+  setEquatorTemperature?: (value: number) => void;
 
   // Radial gradient properties
   radialCenterX: number;
@@ -156,7 +167,19 @@ const GenerationControls: React.FC<GenerationControlsProps> = (props) => {
         {/* Climate Controls Section */}
         <div className="border border-gray-700 rounded-lg overflow-hidden">
           <button
-            onClick={() => toggleSection("climate")}
+            onClick={() => {
+              // Log temperature parameters when this section is opened
+              if (activeSection !== "climate") {
+                console.log("Temperature UI params:", {
+                  noiseScale: props.temperatureNoiseScale,
+                  noiseOctaves: props.temperatureNoiseOctaves,
+                  noisePersistence: props.temperatureNoisePersistence,
+                  polarTemperature: props.polarTemperature,
+                  equatorTemperature: props.equatorTemperature,
+                });
+              }
+              toggleSection("climate");
+            }}
             className="w-full flex justify-between items-center p-3 bg-gray-700 hover:bg-gray-600 transition text-left"
           >
             <span className="font-medium">Temperature & Climate Settings</span>
@@ -174,6 +197,16 @@ const GenerationControls: React.FC<GenerationControlsProps> = (props) => {
                 setElevationTempEffect={props.setElevationTempEffect}
                 temperatureBandScale={props.temperatureBandScale}
                 setTemperatureBandScale={props.setTemperatureBandScale}
+                noiseScale={props.temperatureNoiseScale}
+                setNoiseScale={props.setTemperatureNoiseScale}
+                noiseOctaves={props.temperatureNoiseOctaves}
+                setNoiseOctaves={props.setTemperatureNoiseOctaves}
+                noisePersistence={props.temperatureNoisePersistence}
+                setNoisePersistence={props.setTemperatureNoisePersistence}
+                polarTemperature={props.polarTemperature}
+                setPolarTemperature={props.setPolarTemperature}
+                equatorTemperature={props.equatorTemperature}
+                setEquatorTemperature={props.setEquatorTemperature}
               />
             </div>
           )}

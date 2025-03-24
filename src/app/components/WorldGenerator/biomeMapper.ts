@@ -29,6 +29,7 @@ export const ELEVATION_BANDS = {
   VERY_HIGH: 0.9, // Very high elevation (peaks)
 };
 
+
 /**
  * Interface to store elevation, moisture, and temperature data
  */

@@ -122,7 +122,7 @@ export const TERRAIN_HEIGHTS = {
 export const MOISTURE_THRESHOLDS = {
   VERY_DRY: 0.15, // Reduced to create more desert/arid regions
   DRY: 0.35, // Adjusted for better transition
-  MEDIUM: 0.55, // Slightly lower for more balanced distribution
+  MEDIUM: 0.5, // Slightly lower for more balanced distribution
   WET: 0.75, // Slightly lower for more balanced distribution
   VERY_WET: 1.0, // Maximum stays the same
 };
@@ -315,3 +315,8 @@ export const COORDS_VISIBLE_THRESHOLD = 2.0; // Show tile coordinates when zoom 
 export const DEBUG_MODE = true; // Enable or disable debug information
 export const SHOW_GRID = true; // Show grid lines in debug mode
 export const SHOW_COORDS = true; // Show coordinates in debug mode
+
+import { DEFAULT_TEMPERATURE_PARAMS } from "./temperatureMapper";
+
+// Export temperature parameters for use in UI components
+export { DEFAULT_TEMPERATURE_PARAMS };

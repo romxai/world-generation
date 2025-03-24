@@ -43,15 +43,15 @@ export interface TemperatureParams {
  */
 export const DEFAULT_TEMPERATURE_PARAMS: TemperatureParams = {
   equatorPosition: 0.5, // Middle of the map
-  temperatureVariance: 0.15, // Regional variance for realism
+  temperatureVariance: 0.08, // Regional variance for realism (reduced for smoother maps)
   polarTemperature: 0.1, // Cold poles
   equatorTemperature: 0.9, // Hot equator
   elevationEffect: 0.25, // Higher elevation = cooler temperature
   bandScale: 1.0, // Default scale factor for temperature bands
   noiseSeed: 12345, // Default seed for regional variations
-  noiseScale: 3.0, // Scale of regional temperature variations
-  noiseOctaves: 3, // Number of octaves for regional variations
-  noisePersistence: 0.5, // Persistence for regional variations
+  noiseScale: 8.0, // Increased scale for smoother regional temperature variations
+  noiseOctaves: 2, // Fewer octaves for smoother variations
+  noisePersistence: 0.4, // Lower persistence for smoother gradients
 };
 
 /**
@@ -150,8 +150,31 @@ export class TemperatureMapper {
     // Get noise value (range roughly 0 to 1)
     const noise = this.regionalVariations.get(x, y);
 
+    // Apply additional smoothing - implement a simple box blur by sampling neighboring points
+    // This creates smoother transitions between different temperature regions
+    let smoothedNoise = noise;
+
+    // Only apply smoothing if we have more than 1 octave for performance reasons
+    if (this.params.noiseOctaves && this.params.noiseOctaves > 1) {
+      // Sample neighboring points and average them
+      const samples = [
+        noise,
+        this.regionalVariations.get(x + 1, y),
+        this.regionalVariations.get(x - 1, y),
+        this.regionalVariations.get(x, y + 1),
+        this.regionalVariations.get(x, y - 1),
+      ];
+
+      // Calculate average of samples (simple box blur)
+      smoothedNoise =
+        samples.reduce((sum, val) => sum + val, 0) / samples.length;
+    }
+
     // Scale by temperature variance parameter and center around 0
-    return (noise - 0.5) * (this.params.temperatureVariance || 0.15) * 2;
+    // Lower multiplier to reduce extreme temperature swings
+    return (
+      (smoothedNoise - 0.5) * (this.params.temperatureVariance || 0.08) * 1.6
+    );
   }
 
   /**

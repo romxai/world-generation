@@ -27,6 +27,7 @@ import {
   DEFAULT_TEMPERATURE_VARIANCE,
   DEFAULT_ELEVATION_TEMP_EFFECT,
   DEFAULT_TEMPERATURE_BAND_SCALE,
+  DEFAULT_TEMPERATURE_PARAMS,
 } from "./components/WorldGenerator/config";
 import GenerationControls from "./components/WorldGenerator/UI/GenerationControls";
 import { DEFAULT_RADIAL_PARAMS } from "./components/WorldGenerator/radialUtils";
@@ -81,6 +82,19 @@ export default function Home() {
   const [temperatureBandScale, setTemperatureBandScale] = useState<number>(
     DEFAULT_TEMPERATURE_BAND_SCALE
   );
+  const [temperatureNoiseScale, setTemperatureNoiseScale] = useState<number>(
+    DEFAULT_TEMPERATURE_PARAMS.noiseScale || 8.0
+  );
+  const [temperatureNoiseOctaves, setTemperatureNoiseOctaves] =
+    useState<number>(DEFAULT_TEMPERATURE_PARAMS.noiseOctaves || 2);
+  const [temperatureNoisePersistence, setTemperatureNoisePersistence] =
+    useState<number>(DEFAULT_TEMPERATURE_PARAMS.noisePersistence || 0.4);
+  const [polarTemperature, setPolarTemperature] = useState<number>(
+    DEFAULT_TEMPERATURE_PARAMS.polarTemperature || 0.1
+  );
+  const [equatorTemperature, setEquatorTemperature] = useState<number>(
+    DEFAULT_TEMPERATURE_PARAMS.equatorTemperature || 0.9
+  );
 
   // Radial gradient settings for ocean effect
   const [radialCenterX, setRadialCenterX] = useState<number>(
@@ -128,6 +142,12 @@ export default function Home() {
       temperatureVariance,
       elevationEffect: elevationTempEffect,
       bandScale: temperatureBandScale,
+      noiseScale: temperatureNoiseScale,
+      noiseOctaves: temperatureNoiseOctaves,
+      noisePersistence: temperatureNoisePersistence,
+      polarTemperature: polarTemperature,
+      equatorTemperature: equatorTemperature,
+      noiseSeed: seed + 2000,
     },
     radialGradientParams: {
       centerX: radialCenterX,
@@ -201,6 +221,23 @@ export default function Home() {
 
   // Generate world with current parameters
   const handleGenerateWorld = (newSeed?: number) => {
+    // Create the temperature parameters object
+    const tempParams = {
+      equatorPosition,
+      temperatureVariance,
+      elevationEffect: elevationTempEffect,
+      bandScale: temperatureBandScale,
+      noiseScale: temperatureNoiseScale,
+      noiseOctaves: temperatureNoiseOctaves,
+      noisePersistence: temperatureNoisePersistence,
+      polarTemperature: polarTemperature,
+      equatorTemperature: equatorTemperature,
+      noiseSeed: newSeed !== undefined ? newSeed + 2000 : seed + 2000,
+    };
+
+    // Log temperature parameters to confirm
+    console.log("Temperature params:", tempParams);
+
     setCurrentGenParams({
       seed: newSeed !== undefined ? newSeed : seed,
       debug,
@@ -215,12 +252,7 @@ export default function Home() {
       moistureScale,
       elevationPersistence,
       moisturePersistence,
-      temperatureParams: {
-        equatorPosition,
-        temperatureVariance,
-        elevationEffect: elevationTempEffect,
-        bandScale: temperatureBandScale,
-      },
+      temperatureParams: tempParams,
       radialGradientParams: {
         centerX: radialCenterX,
         centerY: radialCenterY,
@@ -288,6 +320,17 @@ export default function Home() {
             setElevationTempEffect={setElevationTempEffect}
             temperatureBandScale={temperatureBandScale}
             setTemperatureBandScale={setTemperatureBandScale}
+            // Add the new temperature controls
+            temperatureNoiseScale={temperatureNoiseScale}
+            setTemperatureNoiseScale={setTemperatureNoiseScale}
+            temperatureNoiseOctaves={temperatureNoiseOctaves}
+            setTemperatureNoiseOctaves={setTemperatureNoiseOctaves}
+            temperatureNoisePersistence={temperatureNoisePersistence}
+            setTemperatureNoisePersistence={setTemperatureNoisePersistence}
+            polarTemperature={polarTemperature}
+            setPolarTemperature={setPolarTemperature}
+            equatorTemperature={equatorTemperature}
+            setEquatorTemperature={setEquatorTemperature}
             // Radial gradient properties
             radialCenterX={radialCenterX}
             setRadialCenterX={setRadialCenterX}

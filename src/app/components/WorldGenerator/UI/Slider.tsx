@@ -38,8 +38,15 @@ const Slider: React.FC<SliderProps> = ({
         max={max}
         step={step}
         value={value}
-        onChange={(e) => onChange(Number(e.target.value))}
-        className="w-full"
+        onChange={(e) => onChange(parseFloat(e.target.value))}
+        className="w-full h-2 appearance-none rounded-lg outline-none 
+          bg-gradient-to-r from-blue-900 to-blue-300
+          focus:outline-none focus:ring-2 focus:ring-blue-500
+          hover:cursor-pointer"
+        style={{
+          WebkitAppearance: "none",
+          cursor: "pointer",
+        }}
       />
       <div className="flex justify-between text-xs text-gray-300">
         <span>{leftLabel || min}</span>

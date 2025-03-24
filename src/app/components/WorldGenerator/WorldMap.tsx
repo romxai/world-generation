@@ -37,6 +37,8 @@ import {
   DEFAULT_EQUATOR_POSITION,
   DEFAULT_TEMPERATURE_VARIANCE,
   DEFAULT_ELEVATION_TEMP_EFFECT,
+  DEFAULT_TEMPERATURE_BAND_SCALE,
+  DEFAULT_TEMPERATURE_PARAMS,
   RGB,
 } from "./config";
 import { PerlinNoise, createNoiseGenerator } from "./noiseGenerator";
@@ -68,6 +70,11 @@ interface WorldMapProps {
     polarTemperature?: number;
     equatorTemperature?: number;
     bandScale: number;
+    // New temperature parameters
+    noiseScale?: number;
+    noiseOctaves?: number;
+    noisePersistence?: number;
+    noiseSeed?: number;
   };
   // Radial gradient parameters for ocean effect
   radialGradientParams?: {
@@ -107,7 +114,13 @@ const WorldMap: React.FC<WorldMapProps> = ({
     equatorPosition: DEFAULT_EQUATOR_POSITION,
     temperatureVariance: DEFAULT_TEMPERATURE_VARIANCE,
     elevationEffect: DEFAULT_ELEVATION_TEMP_EFFECT,
-    bandScale: 1.0,
+    bandScale: DEFAULT_TEMPERATURE_BAND_SCALE,
+    // Add new temperature parameter defaults
+    noiseScale: DEFAULT_TEMPERATURE_PARAMS.noiseScale,
+    noiseOctaves: DEFAULT_TEMPERATURE_PARAMS.noiseOctaves,
+    noisePersistence: DEFAULT_TEMPERATURE_PARAMS.noisePersistence,
+    polarTemperature: DEFAULT_TEMPERATURE_PARAMS.polarTemperature,
+    equatorTemperature: DEFAULT_TEMPERATURE_PARAMS.equatorTemperature,
   },
   // Radial gradient parameters for ocean effect
   radialGradientParams = {
