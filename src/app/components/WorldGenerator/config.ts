@@ -13,22 +13,23 @@ export interface RGB {
 }
 
 // World dimensions
-export const WORLD_GRID_WIDTH = 1000; // Fixed number of tiles in the world (x-axis)
-export const WORLD_GRID_HEIGHT = 1000; // Fixed number of tiles in the world (y-axis)
+export const WORLD_GRID_WIDTH = 1080 * 1.2; // Fixed number of tiles in the world (x-axis)
+export const WORLD_GRID_HEIGHT = 720 * 1.2; // Fixed number of tiles in the world (y-axis)
 
 // Noise configuration
-export const DEFAULT_SEED = 42; // Default seed for reproducible generation
-export const NOISE_DETAIL = 9; // Detail level for noise generation
-export const NOISE_FALLOFF = 0.2; // Falloff rate for noise
-export const DEFAULT_OCTAVES = 5; // Default number of octaves for noise
-export const DEFAULT_OCTAVE_WEIGHT = 0.5; // Default weight for each octave
-export const DEFAULT_MOISTURE_SCALE = 150; // Default scale for moisture noise (higher = larger features)
+export const DEFAULT_SEED = 1; // Default seed for reproducible generation
+export const NOISE_DETAIL = 9;
+export const NOISE_ZOOM = 0.45; // Detail level for noise generation
+export const NOISE_FALLOFF = 0.5; // Falloff rate for noise
+export const DEFAULT_OCTAVES = 10; // Default number of octaves for noise
+export const DEFAULT_OCTAVE_WEIGHT = 0.45; // Default weight for each octave
+export const DEFAULT_MOISTURE_SCALE = 200; // Default scale for moisture noise (higher = larger features)
 export const DEFAULT_ELEVATION_SCALE = 200; // Default scale for elevation noise (higher = larger features)
 
 // Temperature & climate settings
 export const DEFAULT_EQUATOR_POSITION = 0.5; // Where the equator is located (0-1)
 export const DEFAULT_TEMPERATURE_VARIANCE = 0.2; // Random variation in temperature
-export const DEFAULT_ELEVATION_TEMP_EFFECT = 0.3; // How much elevation cools temperature
+export const DEFAULT_ELEVATION_TEMP_EFFECT = 0.2; // How much elevation cools temperature
 
 // Camera and zoom settings
 export const INITIAL_ZOOM = 1.0; // Starting zoom level (1.0 = 100%)

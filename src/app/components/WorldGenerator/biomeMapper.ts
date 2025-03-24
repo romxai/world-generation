@@ -19,8 +19,8 @@ import {
  * Range of values defining elevation bands
  */
 export const ELEVATION_BANDS = {
-  WATER_DEEP: 0.3, // Deep ocean - increased to create more deep ocean
-  WATER_MEDIUM: 0.38, // Medium depth water
+  WATER_DEEP: 0.45, // Deep ocean - increased to create more deep ocean
+  WATER_MEDIUM: 0.48, // Medium depth water
   WATER_SHALLOW: 0.5, // Shallow water - increased to create more defined shorelines
   SHORE: 0.51, // Beach/shore zone - narrow transition band
   LOW: 0.55, // Low elevation areas (plains, deserts, etc.)

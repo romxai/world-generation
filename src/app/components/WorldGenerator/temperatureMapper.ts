@@ -113,7 +113,7 @@ export function calculateTemperature(
 
   // Add some random variance (could be based on longitude or other factors)
   const longitudeFactor = Math.sin(getLongitude(x) * Math.PI * 2);
-  temperature += longitudeFactor * variance * 0.5;
+  temperature += longitudeFactor * variance * 0.8;
 
   // Clamp temperature to valid range
   return Math.max(0, Math.min(1, temperature));
