@@ -33,7 +33,7 @@ export const DEFAULT_ELEVATION_TEMP_EFFECT = 0.2; // How much elevation cools te
 export const DEFAULT_TEMPERATURE_BAND_SCALE = 1.0; // Scale factor for temperature bands (1.0 = normal)
 
 // Camera and zoom settings
-export const INITIAL_ZOOM = 1.0; // Starting zoom level (1.0 = 100%)
+export const INITIAL_ZOOM = 0.09; // Starting zoom level (1.0 = 100%)
 export const MIN_ZOOM = 0.01; // Minimum zoom allowed (10%)
 export const MAX_ZOOM = 5.0; // Maximum zoom allowed (500%)
 export const CAMERA_SPEED = 10; // Speed for camera movement

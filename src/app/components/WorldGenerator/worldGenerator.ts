@@ -20,9 +20,9 @@ import {
 } from "./biomeMapper";
 import { getTerrainTypeForHeight, getTerrainColor } from "./terrainUtils";
 import {
-  calculateTemperature,
   getTemperatureColor,
   TemperatureParams,
+  TemperatureMapper,
 } from "./temperatureMapper";
 import {
   RadialGradientParams,
@@ -65,6 +65,7 @@ export class WorldGenerator {
   private elevationNoise: OctaveNoise;
   private moistureNoise: OctaveNoise;
   private config: WorldGeneratorConfig;
+  private temperatureMapper: TemperatureMapper;
 
   /**
    * Create a new world generator with the specified configuration
@@ -96,12 +97,19 @@ export class WorldGenerator {
       scale: config.moistureScale,
       persistence: config.moisturePersistence,
     });
+
+    // Initialize temperature mapper with precomputed heat gradient
+    this.temperatureMapper = new TemperatureMapper(config.temperatureParams);
   }
 
   /**
    * Update the configuration of the world generator
    */
   updateConfig(newConfig: Partial<WorldGeneratorConfig>): void {
+    // Update the stored configuration
+    Object.assign(this.config, newConfig);
+
+    // Update radial gradient parameters if provided
     if (newConfig.radialGradientParams) {
       this.config.radialGradientParams = {
         ...this.config.radialGradientParams,
@@ -109,9 +117,7 @@ export class WorldGenerator {
       };
     }
 
-    this.config = { ...this.config, ...newConfig };
-
-    // If seed changed, recreate both noise generators
+    // If seed changed, recreate the noise generators
     if (newConfig.seed !== undefined) {
       this.elevationNoise = createElevationNoise(
         this.config.seed,
@@ -122,56 +128,72 @@ export class WorldGenerator {
         this.config.moistureOctaves
       );
 
-      // Re-apply the scale and persistence settings
+      // Apply existing scale and persistence settings
       this.elevationNoise.updateParams({
         scale: this.config.elevationScale,
         persistence: this.config.elevationPersistence,
       });
+
       this.moistureNoise.updateParams({
         scale: this.config.moistureScale,
         persistence: this.config.moisturePersistence,
       });
-    } else {
-      // Otherwise just update the parameters that might have changed
-      if (
-        newConfig.elevationOctaves !== undefined ||
-        newConfig.elevationScale !== undefined ||
-        newConfig.elevationPersistence !== undefined
-      ) {
-        // If octaves changed, we need to recreate the noise generator
-        if (newConfig.elevationOctaves !== undefined) {
-          this.elevationNoise = createElevationNoise(
-            this.config.seed,
-            this.config.elevationOctaves
-          );
-        }
 
-        // Update parameters that might have changed
-        this.elevationNoise.updateParams({
-          scale: this.config.elevationScale,
-          persistence: this.config.elevationPersistence,
-        });
+      // Recreate the temperature mapper with new seed
+      this.temperatureMapper = new TemperatureMapper({
+        ...this.config.temperatureParams,
+        noiseSeed: this.config.seed + 2000, // Use a different offset for temperature
+      });
+
+      return; // Skip other updates if seed changed
+    }
+
+    // Update elevation noise parameters if provided
+    if (
+      newConfig.elevationOctaves ||
+      newConfig.elevationScale ||
+      newConfig.elevationPersistence
+    ) {
+      // If octaves changed, recreate the noise generator
+      if (newConfig.elevationOctaves) {
+        this.elevationNoise = createElevationNoise(
+          this.config.seed,
+          this.config.elevationOctaves
+        );
       }
 
-      if (
-        newConfig.moistureOctaves !== undefined ||
-        newConfig.moistureScale !== undefined ||
-        newConfig.moisturePersistence !== undefined
-      ) {
-        // If octaves changed, we need to recreate the noise generator
-        if (newConfig.moistureOctaves !== undefined) {
-          this.moistureNoise = createMoistureNoise(
-            this.config.seed,
-            this.config.moistureOctaves
-          );
-        }
+      this.elevationNoise.updateParams({
+        scale: this.config.elevationScale,
+        persistence: this.config.elevationPersistence,
+      });
+    }
 
-        // Update parameters that might have changed
-        this.moistureNoise.updateParams({
-          scale: this.config.moistureScale,
-          persistence: this.config.moisturePersistence,
-        });
+    // Update moisture noise parameters if provided
+    if (
+      newConfig.moistureOctaves ||
+      newConfig.moistureScale ||
+      newConfig.moisturePersistence
+    ) {
+      // If octaves changed, recreate the noise generator
+      if (newConfig.moistureOctaves) {
+        this.moistureNoise = createMoistureNoise(
+          this.config.seed,
+          this.config.moistureOctaves
+        );
       }
+
+      this.moistureNoise.updateParams({
+        scale: this.config.moistureScale,
+        persistence: this.config.moisturePersistence,
+      });
+    }
+
+    // Update temperature mapper if temperature params have changed
+    if (newConfig.temperatureParams) {
+      this.temperatureMapper = new TemperatureMapper({
+        ...this.config.temperatureParams,
+        ...newConfig.temperatureParams,
+      });
     }
   }
 
@@ -202,7 +224,7 @@ export class WorldGenerator {
    * Get the temperature value at a specific coordinate
    */
   getTemperature(x: number, y: number, elevation: number): number {
-    return calculateTemperature(x, y, elevation, this.config.temperatureParams);
+    return this.temperatureMapper.calculateTemperature(x, y, elevation);
   }
 
   /**

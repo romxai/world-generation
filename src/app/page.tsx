@@ -150,12 +150,12 @@ export default function Home() {
     } else {
       const preset = BIOME_PRESETS[biomePreset as keyof typeof BIOME_PRESETS];
       if (preset) {
-        setBiomeWeights([...preset]);
+        //setBiomeWeights([...preset]);
 
         // Update the custom weights when switching to custom preset
         // This helps users start with the currently selected preset as a base
         if (biomePreset !== "CUSTOM") {
-          setCustomWeights([...preset]);
+          //setCustomWeights([...preset]);
         }
       }
     }

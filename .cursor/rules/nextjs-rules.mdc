@@ -1,0 +1,11 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+
+AVOID generating codefiles with more than 300 lines, instead split it amongst several smallerfiles doing tasks collaborating together to do the full functionality.
+
+CREATE WELL COMMENTED code so that it is easy to understand and debug, for very complex functions add a note section above the function in comments to explain it, in a few lines.
+
+make sure the file sturucture is logical.

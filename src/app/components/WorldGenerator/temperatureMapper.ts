@@ -1,11 +1,12 @@
 /**
  * temperatureMapper.ts
  *
- * This module handles the temperature calculations based on latitude/longitude
- * to create more realistic climate zones on the world map.
+ * This module handles temperature calculations using a precomputed heat gradient
+ * map to improve performance while maintaining realistic climate patterns.
  */
 
 import { WORLD_GRID_HEIGHT, WORLD_GRID_WIDTH } from "./config";
+import { OctaveNoise } from "./octaveNoise";
 
 /**
  * Temperature zones constants
@@ -26,11 +27,15 @@ export const TEMPERATURE_ZONES = {
  */
 export interface TemperatureParams {
   equatorPosition?: number; // Where the equator is located (0-1, default 0.5)
-  temperatureVariance?: number; // How much temperature varies (0-1, default 0.2)
+  temperatureVariance?: number; // How much regional temperature varies (0-1, default 0.2)
   polarTemperature?: number; // Base temperature at poles (0-1, default 0.1)
   equatorTemperature?: number; // Base temperature at equator (0-1, default 0.9)
   elevationEffect?: number; // How much elevation affects temperature (0-1, default 0.3)
   bandScale?: number; // Scale factor for temperature bands (1.0 = normal)
+  noiseSeed?: number; // Seed for regional temperature variations
+  noiseScale?: number; // Scale of regional temperature variations
+  noiseOctaves?: number; // Number of octaves for regional variations
+  noisePersistence?: number; // Persistence for regional variations
 }
 
 /**
@@ -38,94 +43,134 @@ export interface TemperatureParams {
  */
 export const DEFAULT_TEMPERATURE_PARAMS: TemperatureParams = {
   equatorPosition: 0.5, // Middle of the map
-  temperatureVariance: 0.2, // Slight variance for realism
+  temperatureVariance: 0.15, // Regional variance for realism
   polarTemperature: 0.1, // Cold poles
   equatorTemperature: 0.9, // Hot equator
-  elevationEffect: 0.3, // Higher elevation = cooler temperature
+  elevationEffect: 0.25, // Higher elevation = cooler temperature
   bandScale: 1.0, // Default scale factor for temperature bands
+  noiseSeed: 12345, // Default seed for regional variations
+  noiseScale: 3.0, // Scale of regional temperature variations
+  noiseOctaves: 3, // Number of octaves for regional variations
+  noisePersistence: 0.5, // Persistence for regional variations
 };
 
 /**
- * Calculate the base temperature at a given latitude
- * @param latitude Normalized latitude value (0-1, where 0 is south pole, 1 is north pole)
- * @param params Temperature calculation parameters
- * @returns Temperature value (0-1, where 0 is coldest, 1 is hottest)
+ * Class to handle temperature calculations with precomputed heat gradients
  */
-export function calculateBaseTemperature(
-  latitude: number,
-  params: TemperatureParams = DEFAULT_TEMPERATURE_PARAMS
-): number {
-  const equatorPos = params.equatorPosition || 0.5;
-  const polarTemp = params.polarTemperature || 0.1;
-  const equatorTemp = params.equatorTemperature || 0.9;
-  const bandScale = params.bandScale || 1.0;
+export class TemperatureMapper {
+  private readonly heatGradientMap: number[][];
+  private readonly regionalVariations: OctaveNoise;
+  private readonly params: TemperatureParams;
 
-  // Calculate distance from equator (0 = at equator, 1 = at pole)
-  let distanceFromEquator =
-    Math.abs(latitude - equatorPos) / Math.max(equatorPos, 1 - equatorPos);
+  /**
+   * Initialize the temperature mapper with precomputed values
+   */
+  constructor(params: TemperatureParams = DEFAULT_TEMPERATURE_PARAMS) {
+    this.params = {
+      ...DEFAULT_TEMPERATURE_PARAMS,
+      ...params,
+    };
 
-  // Apply band scaling - higher values make the bands narrower (more extreme temperatures)
-  // Lower values make the bands wider (more moderate temperatures)
-  if (bandScale !== 1.0) {
-    // Ensure distance stays in [0, 1] range
-    distanceFromEquator = Math.pow(distanceFromEquator, 1 / bandScale);
+    // Generate the base heat gradient map (latitude-based)
+    this.heatGradientMap = this.generateHeatGradientMap();
+
+    // Create noise generator for regional temperature variations
+    this.regionalVariations = new OctaveNoise({
+      seed: this.params.noiseSeed || 12345,
+      octaveCount: this.params.noiseOctaves || 3,
+      scale: this.params.noiseScale || 3.0,
+      persistence: this.params.noisePersistence || 0.5,
+    });
   }
 
-  // Temperature decreases as you move away from the equator (cosine pattern)
-  const temperatureFactor = Math.cos((distanceFromEquator * Math.PI) / 2);
+  /**
+   * Generate a precomputed heat gradient map based on latitude
+   */
+  private generateHeatGradientMap(): number[][] {
+    const map: number[][] = [];
+    const {
+      equatorPosition = 0.5,
+      polarTemperature = 0.1,
+      equatorTemperature = 0.9,
+      bandScale = 1.0,
+    } = this.params;
 
-  // Calculate final temperature
-  return polarTemp + temperatureFactor * (equatorTemp - polarTemp);
-}
+    for (let y = 0; y < WORLD_GRID_HEIGHT; y++) {
+      map[y] = [];
 
-/**
- * Calculate the normalized latitude (0-1) from a y-coordinate in the world grid
- * @param y The y-coordinate in the world grid
- * @returns Normalized latitude (0 = south pole, 1 = north pole)
- */
-export function getLatitude(y: number): number {
-  return y / WORLD_GRID_HEIGHT;
-}
+      // Calculate normalized latitude (0 = south pole, 1 = north pole)
+      const latitude = y / WORLD_GRID_HEIGHT;
 
-/**
- * Calculate the normalized longitude (0-1) from an x-coordinate in the world grid
- * @param x The x-coordinate in the world grid
- * @returns Normalized longitude (0 = west edge, 1 = east edge)
- */
-export function getLongitude(x: number): number {
-  return x / WORLD_GRID_WIDTH;
-}
+      // Calculate distance from equator (0 = at equator, 1 = at pole)
+      let distanceFromEquator =
+        Math.abs(latitude - equatorPosition) /
+        Math.max(equatorPosition, 1 - equatorPosition);
 
-/**
- * Calculate temperature at a specific world coordinate, adjusting for elevation
- * @param x X-coordinate in the world grid
- * @param y Y-coordinate in the world grid
- * @param elevation Elevation value at the coordinate (0-1)
- * @param params Temperature calculation parameters
- * @returns Final temperature value (0-1)
- */
-export function calculateTemperature(
-  x: number,
-  y: number,
-  elevation: number,
-  params: TemperatureParams = DEFAULT_TEMPERATURE_PARAMS
-): number {
-  // Get the latitude (0-1, where 0 is south pole, 1 is north pole)
-  const latitude = getLatitude(y);
+      // Apply band scaling - higher values make the bands narrower (more extreme temperatures)
+      if (bandScale !== 1.0) {
+        // Ensure distance stays in [0, 1] range
+        distanceFromEquator = Math.pow(distanceFromEquator, 1 / bandScale);
+      }
 
-  // Calculate base temperature based on latitude
-  let temperature = calculateBaseTemperature(latitude, params);
+      // Temperature decreases as you move away from the equator (cosine pattern)
+      const temperatureFactor = Math.cos((distanceFromEquator * Math.PI) / 2);
 
-  // Add some random variation
-  const variance = params.temperatureVariance || 0.2;
-  temperature += (Math.random() * 2 - 1) * variance * 0.1;
+      // Calculate base temperature for this latitude (same for all x at this y)
+      const baseTemperature =
+        polarTemperature +
+        temperatureFactor * (equatorTemperature - polarTemperature);
 
-  // Higher elevation means colder temperature
-  const elevationEffect = params.elevationEffect || 0.3;
-  temperature -= elevation * elevationEffect;
+      // Store the same value for all x at this latitude
+      for (let x = 0; x < WORLD_GRID_WIDTH; x++) {
+        map[y][x] = baseTemperature;
+      }
+    }
 
-  // Ensure temperature is in the valid range [0, 1]
-  return Math.max(0, Math.min(1, temperature));
+    return map;
+  }
+
+  /**
+   * Get the base temperature from the precomputed heat gradient map
+   */
+  getBaseTemperature(x: number, y: number): number {
+    // Ensure coordinates are within the world grid bounds
+    const boundedX = Math.max(0, Math.min(Math.floor(x), WORLD_GRID_WIDTH - 1));
+    const boundedY = Math.max(
+      0,
+      Math.min(Math.floor(y), WORLD_GRID_HEIGHT - 1)
+    );
+
+    return this.heatGradientMap[boundedY][boundedX];
+  }
+
+  /**
+   * Get regional temperature variation (smoothed noise value)
+   */
+  getRegionalVariation(x: number, y: number): number {
+    // Get noise value (range roughly 0 to 1)
+    const noise = this.regionalVariations.get(x, y);
+
+    // Scale by temperature variance parameter and center around 0
+    return (noise - 0.5) * (this.params.temperatureVariance || 0.15) * 2;
+  }
+
+  /**
+   * Calculate final temperature by combining base heat, regional variations, and elevation
+   */
+  calculateTemperature(x: number, y: number, elevation: number): number {
+    // Get base temperature from precomputed gradient map
+    let temperature = this.getBaseTemperature(x, y);
+
+    // Add regional variations (larger scale patterns)
+    temperature += this.getRegionalVariation(x, y);
+
+    // Higher elevation means colder temperature
+    const elevationEffect = this.params.elevationEffect || 0.25;
+    temperature -= elevation * elevationEffect;
+
+    // Ensure temperature is in the valid range [0, 1]
+    return Math.max(0, Math.min(1, temperature));
+  }
 }
 
 /**
@@ -171,4 +216,19 @@ export function getTemperatureColor(temperature: number): {
   }
 
   return { r, g, b };
+}
+
+/**
+ * Backward compatibility function for calculating temperature
+ * Creates a temporary TemperatureMapper instance to compute the temperature
+ */
+export function calculateTemperature(
+  x: number,
+  y: number,
+  elevation: number,
+  params: TemperatureParams = DEFAULT_TEMPERATURE_PARAMS
+): number {
+  // Create a temporary mapper with the provided parameters
+  const mapper = new TemperatureMapper(params);
+  return mapper.calculateTemperature(x, y, elevation);
 }
