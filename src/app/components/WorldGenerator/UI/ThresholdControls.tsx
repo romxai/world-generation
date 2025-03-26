@@ -29,7 +29,6 @@ interface ThresholdControlsProps {
   moisturePersistence: number;
   temperatureParams: TemperatureParams;
   radialGradientParams: RadialGradientParams;
-  biomeWeights: number[];
 
   // Moisture threshold controls
   moistureThresholds: typeof MOISTURE_THRESHOLDS;
@@ -84,7 +83,6 @@ const ThresholdControls: React.FC<ThresholdControlsProps> = (props) => {
       moisturePersistence: props.moisturePersistence,
       temperatureParams: props.temperatureParams,
       radialGradientParams: props.radialGradientParams,
-      biomeWeights: props.biomeWeights,
       moistureThresholds,
       temperatureThresholds,
     });

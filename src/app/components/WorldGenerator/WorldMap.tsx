@@ -1,7 +1,13 @@
 // WorldMap.tsx - Main component for rendering the procedurally generated world map
 "use client";
 
-import React, { useRef, useEffect, useState, useMemo } from "react";
+import React, {
+  useRef,
+  useEffect,
+  useState,
+  useMemo,
+  useCallback,
+} from "react";
 import {
   WINDOW_WIDTH,
   WINDOW_HEIGHT,
@@ -22,17 +28,14 @@ import {
   WORLD_GRID_HEIGHT,
   GRID_VISIBLE_THRESHOLD,
   COORDS_VISIBLE_THRESHOLD,
-  TerrainType,
-  BIOME_PRESETS,
+  BiomeType,
   VisualizationMode,
-  calculateTerrainHeights,
   LOW_ZOOM_THRESHOLD,
   LOW_ZOOM_TILE_FACTOR,
   DEFAULT_OCTAVES,
   DEFAULT_ELEVATION_SCALE,
   DEFAULT_MOISTURE_SCALE,
   DEFAULT_OCTAVE_WEIGHT,
-  BiomeType,
   BIOME_NAMES,
   DEFAULT_EQUATOR_POSITION,
   DEFAULT_TEMPERATURE_VARIANCE,
@@ -43,9 +46,24 @@ import {
   MOISTURE_THRESHOLDS,
   TEMPERATURE_THRESHOLDS,
 } from "./config";
-import { PerlinNoise, createNoiseGenerator } from "./noiseGenerator";
 import { WorldGenerator, WorldGeneratorConfig } from "./worldGenerator";
 import { rgbToString } from "./terrainUtils";
+
+// Define the ContinentalFalloffParams interface
+export interface ContinentalFalloffParams {
+  enabled: boolean;
+  falloffRate: number;
+  centerX: number;
+  centerY: number;
+}
+
+// Define default continental falloff parameters
+export const DEFAULT_CONTINENTAL_PARAMS: ContinentalFalloffParams = {
+  enabled: false,
+  falloffRate: 0.8,
+  centerX: 0.5,
+  centerY: 0.5,
+};
 
 interface WorldMapProps {
   width?: number;
@@ -53,7 +71,6 @@ interface WorldMapProps {
   tileSize?: number;
   seed?: number;
   debug?: boolean;
-  biomeWeights?: number[];
   noiseDetail?: number;
   noiseFalloff?: number;
   visualizationMode?: VisualizationMode;
@@ -86,9 +103,12 @@ interface WorldMapProps {
     falloffExponent: number;
     strength: number;
   };
+  // Continental falloff parameters
+  continentalFalloffParams?: ContinentalFalloffParams;
   // Add threshold parameters
   moistureThresholds?: typeof MOISTURE_THRESHOLDS;
   temperatureThresholds?: typeof TEMPERATURE_THRESHOLDS;
+
 }
 
 interface CameraState {
@@ -103,7 +123,6 @@ const WorldMap: React.FC<WorldMapProps> = ({
   tileSize = DEFAULT_TILE_SIZE,
   seed = DEFAULT_SEED,
   debug = DEBUG_MODE,
-  biomeWeights = BIOME_PRESETS.ISLANDS,
   noiseDetail = NOISE_DETAIL,
   noiseFalloff = NOISE_FALLOFF,
   visualizationMode = VisualizationMode.BIOME,
@@ -135,6 +154,8 @@ const WorldMap: React.FC<WorldMapProps> = ({
     falloffExponent: 2.0,
     strength: 0.5,
   },
+  // Continental falloff parameters
+  continentalFalloffParams = DEFAULT_CONTINENTAL_PARAMS,
   // Add threshold parameters with defaults
   moistureThresholds = MOISTURE_THRESHOLDS,
   temperatureThresholds = TEMPERATURE_THRESHOLDS,
@@ -162,12 +183,6 @@ const WorldMap: React.FC<WorldMapProps> = ({
   const [currentVisualizationMode, setVisualizationMode] =
     useState<string>(visualizationMode);
 
-  // Cache the terrain heights calculated from weights
-  // This improves performance by not recalculating on every render
-  const terrainHeights = useMemo(() => {
-    return calculateTerrainHeights(biomeWeights);
-  }, [biomeWeights]);
-
   // Create world generator with specified parameters
   const worldGeneratorRef = useRef<WorldGenerator>(
     new WorldGenerator({
@@ -182,11 +197,18 @@ const WorldMap: React.FC<WorldMapProps> = ({
         equatorPosition: temperatureParams.equatorPosition,
         temperatureVariance: temperatureParams.temperatureVariance,
         elevationEffect: temperatureParams.elevationEffect,
-        polarTemperature: 0.0,
-        equatorTemperature: 1.0,
+        polarTemperature: temperatureParams.polarTemperature || 0.0,
+        equatorTemperature: temperatureParams.equatorTemperature || 1.0,
         bandScale: temperatureParams.bandScale,
+        noiseScale: temperatureParams.noiseScale,
+        noiseOctaves: temperatureParams.noiseOctaves,
+        noisePersistence: temperatureParams.noisePersistence,
+        noiseSeed: temperatureParams.noiseSeed || seed + 2000,
       },
-      radialGradientParams: radialGradientParams,
+      radialGradientParams,
+      moistureThresholds,
+      temperatureThresholds,
+
     })
   );
 
@@ -204,6 +226,7 @@ const WorldMap: React.FC<WorldMapProps> = ({
       radialGradientParams,
       moistureThresholds,
       temperatureThresholds,
+
     });
     setMapChanged(true);
   }, [
@@ -218,13 +241,14 @@ const WorldMap: React.FC<WorldMapProps> = ({
     radialGradientParams,
     moistureThresholds,
     temperatureThresholds,
+
   ]);
 
   // Re-render map when visualization mode or biome weights change
   useEffect(() => {
     setMapChanged(true);
     setVisualizationMode(visualizationMode);
-  }, [visualizationMode, biomeWeights]);
+  }, [visualizationMode]);
 
   // Key states for camera movement
   const keyStates = useRef<{ [key: string]: boolean }>({
@@ -508,21 +532,7 @@ const WorldMap: React.FC<WorldMapProps> = ({
           tileX,
           tileY
         );
-        const biomeData = worldGeneratorRef.current.getBiomeData(tileX, tileY);
-        const biomeType = worldGeneratorRef.current.getBiome(tileX, tileY);
-
-        // Update debug info
-        setDebugInfo(
-          `Tile: (${tileX}, ${tileY}) | ` +
-            `Elev: ${biomeData.elevation.toFixed(3)} | ` +
-            `Moist: ${biomeData.moisture.toFixed(3)} | ` +
-            `Temp: ${biomeData.temperature.toFixed(3)} | ` +
-            `Biome: ${BIOME_NAMES[biomeType]} | ` +
-            `Zoom: ${camera.zoom.toFixed(2)} | ` +
-            `View: ${isLowZoom ? "Low-res" : "Full-res"} | ` +
-            `Skip: ${skipFactor} | ` +
-            `Camera: (${camera.x.toFixed(1)}, ${camera.y.toFixed(1)})`
-        );
+        setDebugInfo(debugTileInfo);
       }
     }
 
@@ -541,8 +551,47 @@ const WorldMap: React.FC<WorldMapProps> = ({
     debug,
     mousePos,
     currentVisualizationMode,
-    terrainHeights,
   ]);
+
+  // Function to get debug information
+  const handleMouseMoveDebug = useCallback(
+    (e: MouseEvent) => {
+      if (!canvasRef.current) return;
+
+      const rect = canvasRef.current.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+
+      // Calculate the effective tile size based on zoom
+      const effectiveTileSize = tileSize * camera.zoom;
+
+      // Convert screen coordinates to world coordinates
+      const worldX = Math.floor(
+        camera.x + (mouseX - width / 2) / effectiveTileSize
+      );
+      const worldY = Math.floor(
+        camera.y + (mouseY - height / 2) / effectiveTileSize
+      );
+
+      // Set mouse position for debug display
+      setMousePos({ x: worldX, y: worldY });
+
+      // Get debug info
+      if (
+        worldX >= 0 &&
+        worldX < WORLD_GRID_WIDTH &&
+        worldY >= 0 &&
+        worldY < WORLD_GRID_HEIGHT
+      ) {
+        const debugText = worldGeneratorRef.current.getDebugInfo(
+          worldX,
+          worldY
+        );
+        setDebugInfo(debugText);
+      }
+    },
+    [camera, tileSize, width, height]
+  );
 
   return (
     <div className="world-map-container" style={{ position: "relative" }}>
@@ -567,9 +616,7 @@ const WorldMap: React.FC<WorldMapProps> = ({
             borderRadius: "3px",
             fontSize: "12px",
             fontFamily: "monospace",
-            maxWidth: "80%",
             whiteSpace: "nowrap",
-            overflow: "hidden",
             textOverflow: "ellipsis",
           }}
         >

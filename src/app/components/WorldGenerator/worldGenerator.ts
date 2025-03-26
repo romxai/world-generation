@@ -8,7 +8,6 @@
 import {
   BiomeType,
   RGB,
-  TerrainType,
   VisualizationMode,
   DEFAULT_RADIAL_PARAMS,
   TemperatureParams,
@@ -26,7 +25,6 @@ import {
   getMoistureColor,
   BiomeData,
 } from "./biomeMapper";
-import { getTerrainTypeForHeight, getTerrainColor } from "./terrainUtils";
 import { getTemperatureColor, TemperatureMapper } from "./temperatureMapper";
 import { applyRadialGradient } from "./radialUtils";
 
@@ -199,7 +197,7 @@ export class WorldGenerator {
       });
     }
 
-    // Update temperature mapper if temperature params have changed
+    // Update temperature parameters if provided
     if (newConfig.temperatureParams) {
       this.temperatureMapper = new TemperatureMapper({
         ...this.config.temperatureParams,
@@ -209,44 +207,50 @@ export class WorldGenerator {
   }
 
   /**
-   * Get the elevation value at a specific coordinate
+   * Get the elevation value at the specified world coordinates
    */
   getElevation(x: number, y: number): number {
-    // Get raw elevation from noise
-    const rawElevation = this.elevationNoise.get(x, y);
+    // Get raw elevation noise value
+    let elevation = this.elevationNoise.get(x, y);
 
-    // Apply radial gradient effect to create ocean borders
-    return applyRadialGradient(
-      x,
-      y,
-      rawElevation,
-      this.config.radialGradientParams
-    );
+    // Apply radial gradient for continent/ocean distribution if enabled
+    if (
+      this.config.radialGradientParams &&
+      this.config.radialGradientParams.strength !== undefined &&
+      this.config.radialGradientParams.strength > 0
+    ) {
+      elevation = applyRadialGradient(
+        x,
+        y,
+        elevation,
+        this.config.radialGradientParams
+      );
+    }
+
+    return elevation;
   }
 
   /**
-   * Get the moisture value at a specific coordinate
+   * Get the moisture value at the specified world coordinates
    */
   getMoisture(x: number, y: number): number {
     return this.moistureNoise.get(x, y);
   }
 
   /**
-   * Get the temperature value at a specific coordinate
+   * Get the temperature value at the specified world coordinates
    */
   getTemperature(x: number, y: number, elevation: number): number {
     return this.temperatureMapper.calculateTemperature(x, y, elevation);
   }
 
   /**
-   * Get complete biome data for a specific position
+   * Get comprehensive biome data for a specific location
    */
   getBiomeData(x: number, y: number): BiomeData {
     // Get raw elevation and moisture values
     const elevation = this.getElevation(x, y);
     const moisture = this.getMoisture(x, y);
-
-    // Calculate temperature based on elevation and position
     const temperature = this.getTemperature(x, y, elevation);
 
     // Return comprehensive data object
@@ -319,11 +323,6 @@ export class WorldGenerator {
       case VisualizationMode.TEMPERATURE:
         // Return temperature-based color gradient
         return getTemperatureColor(biomeData.temperature);
-
-      case VisualizationMode.WEIGHT_DISTRIBUTION:
-        // For backward compatibility, show terrain distribution
-        const terrainType = getTerrainTypeForHeight(biomeData.elevation);
-        return getTerrainColor(biomeData.elevation, terrainType);
 
       case VisualizationMode.BIOME:
       default:

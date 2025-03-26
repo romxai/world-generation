@@ -115,17 +115,6 @@ export const INITIAL_OFFSET_Y = WORLD_GRID_HEIGHT / 2; // Initial camera positio
 export const LOW_ZOOM_THRESHOLD = 0.5; // Threshold for low zoom performance optimizations
 export const LOW_ZOOM_TILE_FACTOR = 4; // Factor to reduce tile count when zoomed out
 
-// Terrain type identifiers
-export enum TerrainType {
-  OCEAN_DEEP = 0,
-  OCEAN_MEDIUM = 1,
-  OCEAN_SHALLOW = 2,
-  BEACH = 3,
-  GRASS = 4,
-  MOUNTAIN = 5,
-  SNOW = 6,
-}
-
 // Biome identifiers - expanded biome system
 export enum BiomeType {
   // Water biomes
@@ -161,34 +150,6 @@ export enum BiomeType {
   SNOW = 17,
 }
 
-// Biome weight presets - These determine the relative distribution of terrain types
-// Higher weight means more of that terrain type will appear in the world
-export const BIOME_PRESETS = {
-  // WORLD preset - Realistic Earth-like world with few large continents surrounded by large oceans
-  WORLD: [80, 10, 10, 5, 35, 25, 20],
-
-  // CONTINENTS preset - Mostly land with large continents and less water
-  CONTINENTS: [20, 10, 10, 5, 50, 40, 30],
-
-  // ISLANDS preset - Many small islands scattered across ocean
-  ISLANDS: [65, 15, 10, 5, 20, 15, 10],
-
-  // Custom preset - User defined, initially same as CONTINENTS
-  CUSTOM: [20, 10, 10, 5, 50, 40, 30],
-};
-
-// Terrain height thresholds (noise values) - these will be dynamically calculated from weights
-// These are default fallback values if weight-based calculation is not used
-export const TERRAIN_HEIGHTS = {
-  [TerrainType.OCEAN_DEEP]: { min: 0.0, max: 0.35 },
-  [TerrainType.OCEAN_MEDIUM]: { min: 0.35, max: 0.4 },
-  [TerrainType.OCEAN_SHALLOW]: { min: 0.4, max: 0.45 },
-  [TerrainType.BEACH]: { min: 0.45, max: 0.5 },
-  [TerrainType.GRASS]: { min: 0.5, max: 0.65 },
-  [TerrainType.MOUNTAIN]: { min: 0.65, max: 0.75 },
-  [TerrainType.SNOW]: { min: 0.75, max: 1.0 },
-};
-
 // Default moisture thresholds - used for biome determination
 export const MOISTURE_THRESHOLDS = {
   VERY_DRY: 0.15, // Reduced to create more desert/arid regions
@@ -207,80 +168,6 @@ export const TEMPERATURE_THRESHOLDS = {
   WARM: 0.75,
   HOT: 0.9,
   SCORCHING: 1.0,
-};
-
-// Function to calculate height thresholds based on weights
-// This is similar to the Python implementation in the reference code
-export const calculateTerrainHeights = (
-  weights: number[]
-): typeof TERRAIN_HEIGHTS => {
-  // Make a copy of the default heights
-  const newHeights = { ...TERRAIN_HEIGHTS };
-
-  // Calculate total weight sum
-  const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
-  // Range from 0 to 1
-  const totalRange = 1.0;
-
-  // Calculate maximum height for each terrain type based on weight values
-  let previousHeight = 0.0;
-  for (let i = 0; i < weights.length; i++) {
-    const terrainType = i as TerrainType;
-    const heightRange = totalRange * (weights[i] / totalWeight);
-
-    newHeights[terrainType] = {
-      min: previousHeight,
-      max: previousHeight + heightRange,
-    };
-
-    previousHeight += heightRange;
-  }
-
-  // Ensure the last terrain type goes to 1.0
-  if (weights.length > 0) {
-    newHeights[(weights.length - 1) as TerrainType].max = 1.0;
-  }
-
-  return newHeights;
-};
-
-// Terrain colors (min and max for gradient effect)
-export const TERRAIN_COLORS = {
-  [TerrainType.OCEAN_DEEP]: {
-    min: { r: 30, g: 120, b: 200 },
-    max: { r: 40, g: 176, b: 251 },
-    lerpAdjustment: 0,
-  },
-  [TerrainType.OCEAN_MEDIUM]: {
-    min: { r: 35, g: 140, b: 220 },
-    max: { r: 40, g: 200, b: 255 },
-    lerpAdjustment: 0,
-  },
-  [TerrainType.OCEAN_SHALLOW]: {
-    min: { r: 40, g: 160, b: 230 },
-    max: { r: 40, g: 255, b: 255 },
-    lerpAdjustment: 0,
-  },
-  [TerrainType.BEACH]: {
-    min: { r: 215, g: 192, b: 158 },
-    max: { r: 255, g: 246, b: 193 },
-    lerpAdjustment: 0.3,
-  },
-  [TerrainType.GRASS]: {
-    min: { r: 2, g: 166, b: 155 },
-    max: { r: 118, g: 239, b: 124 },
-    lerpAdjustment: 0,
-  },
-  [TerrainType.MOUNTAIN]: {
-    min: { r: 90, g: 90, b: 90 },
-    max: { r: 120, g: 120, b: 120 },
-    lerpAdjustment: 0,
-  },
-  [TerrainType.SNOW]: {
-    min: { r: 220, g: 220, b: 220 },
-    max: { r: 255, g: 255, b: 255 },
-    lerpAdjustment: -0.5,
-  },
 };
 
 // Extended biome colors for the new biome system
@@ -318,28 +205,6 @@ export const BIOME_COLORS = {
   [BiomeType.SNOW]: { r: 240, g: 240, b: 240 },
 };
 
-// List of terrain types in order of height
-export const ALL_TERRAIN_TYPES = [
-  TerrainType.OCEAN_DEEP,
-  TerrainType.OCEAN_MEDIUM,
-  TerrainType.OCEAN_SHALLOW,
-  TerrainType.BEACH,
-  TerrainType.GRASS,
-  TerrainType.MOUNTAIN,
-  TerrainType.SNOW,
-];
-
-// Terrain type names for UI display
-export const TERRAIN_NAMES = {
-  [TerrainType.OCEAN_DEEP]: "Deep Ocean",
-  [TerrainType.OCEAN_MEDIUM]: "Medium Ocean",
-  [TerrainType.OCEAN_SHALLOW]: "Shallow Ocean",
-  [TerrainType.BEACH]: "Beach",
-  [TerrainType.GRASS]: "Grassland",
-  [TerrainType.MOUNTAIN]: "Mountains",
-  [TerrainType.SNOW]: "Snow",
-};
-
 // Biome type names for UI display
 export const BIOME_NAMES = {
   [BiomeType.OCEAN_DEEP]: "Deep Ocean",
@@ -369,7 +234,6 @@ export enum VisualizationMode {
   ELEVATION = "elevation", // Elevation using a height gradient
   MOISTURE = "moisture", // Moisture using a blue gradient
   TEMPERATURE = "temperature", // Temperature using a temperature gradient
-  WEIGHT_DISTRIBUTION = "weight", // Shows how weights affect terrain distribution
 }
 
 // Tile grid constants
@@ -409,9 +273,6 @@ export interface ExportedConfig {
   // Radial gradient settings
   radialGradientParams: RadialGradientParams;
 
-  // Biome weights
-  biomeWeights: number[];
-
   // Thresholds
   moistureThresholds: typeof MOISTURE_THRESHOLDS;
   temperatureThresholds: typeof TEMPERATURE_THRESHOLDS;
@@ -449,9 +310,6 @@ export function createConfigObject(
       ...DEFAULT_RADIAL_PARAMS,
       ...(params.radialGradientParams || {}),
     },
-
-    // Biome weights with defaults
-    biomeWeights: params.biomeWeights || BIOME_PRESETS.WORLD,
 
     // Thresholds with defaults
     moistureThresholds: params.moistureThresholds || MOISTURE_THRESHOLDS,

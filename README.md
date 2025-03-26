@@ -208,7 +208,7 @@ The system is designed to be extendable in several ways:
 
 2. **Tileset Support**: The code includes infrastructure for using image-based tilesets instead of colors, with tile edge detection for proper borders.
 
-3. **Biome Variations**: Additional terrain types can be easily added by extending the `TerrainType` enum and corresponding configs.
+3. **Biome Variations**: Additional biome types can be easily added by extending the `BiomeType` enum and corresponding color configurations.
 
 4. **Feature Generation**: The system can be extended to add rivers, roads, settlements, etc. on top of the base terrain.
 

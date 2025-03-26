@@ -12,11 +12,9 @@ import {
   WINDOW_WIDTH,
   WINDOW_HEIGHT,
   DEFAULT_TILE_SIZE,
-  BIOME_PRESETS,
   VisualizationMode,
   NOISE_DETAIL,
   NOISE_FALLOFF,
-  calculateTerrainHeights,
   DEFAULT_OCTAVES,
   DEFAULT_ELEVATION_SCALE,
   DEFAULT_MOISTURE_SCALE,
@@ -40,10 +38,6 @@ export default function WorldGenerator() {
   // Visualization and biome settings
   const [visualizationMode, setVisualizationMode] = useState<VisualizationMode>(
     VisualizationMode.BIOME
-  );
-  const [biomePreset, setBiomePreset] = useState<string>("WORLD");
-  const [biomeWeights, setBiomeWeights] = useState<number[]>(
-    BIOME_PRESETS.WORLD
   );
 
   // Advanced noise settings
@@ -112,12 +106,6 @@ export default function WorldGenerator() {
     DEFAULT_RADIAL_PARAMS.strength || 0.7
   );
 
-  // UI state
-  const [showWeightEditor, setShowWeightEditor] = useState(false);
-  const [customWeights, setCustomWeights] = useState<number[]>([
-    ...BIOME_PRESETS.WORLD,
-  ]);
-
   // Threshold controls
   const [moistureThresholds, setMoistureThresholds] = useState({
     ...MOISTURE_THRESHOLDS,
@@ -132,7 +120,6 @@ export default function WorldGenerator() {
     debug,
     tileSize,
     visualizationMode,
-    biomeWeights: [...biomeWeights],
     noiseDetail,
     noiseFalloff,
     elevationOctaves,
@@ -164,23 +151,6 @@ export default function WorldGenerator() {
     temperatureThresholds,
   });
 
-  // Handle biome preset changes
-  useEffect(() => {
-    if (biomePreset === "CUSTOM") {
-      setBiomeWeights([...customWeights]);
-    } else {
-      const preset = BIOME_PRESETS[biomePreset as keyof typeof BIOME_PRESETS];
-      if (preset) {
-        setBiomeWeights([...preset]);
-
-        // Update the custom weights when switching to custom preset
-        if (biomePreset !== "CUSTOM") {
-          setCustomWeights([...preset]);
-        }
-      }
-    }
-  }, [biomePreset, customWeights]);
-
   // Update visualization mode immediately
   useEffect(() => {
     setCurrentGenParams((prev) => ({
@@ -205,24 +175,6 @@ export default function WorldGenerator() {
     handleGenerateWorld(newSeed);
   };
 
-  // Handle custom weight changes
-  const handleWeightChange = (index: number, value: number) => {
-    const newWeights = [...customWeights];
-    newWeights[index] = Math.max(0, value); // Ensure weights are non-negative
-    setCustomWeights(newWeights);
-
-    // If currently using custom preset, update the active weights
-    if (biomePreset === "CUSTOM") {
-      setBiomeWeights([...newWeights]);
-    }
-  };
-
-  // Apply custom weights and switch to custom preset
-  const applyCustomWeights = () => {
-    setBiomePreset("CUSTOM");
-    setBiomeWeights([...customWeights]);
-  };
-
   // Generate world with current parameters
   const handleGenerateWorld = (newSeed?: number) => {
     // Create the temperature parameters object
@@ -244,7 +196,6 @@ export default function WorldGenerator() {
       debug,
       tileSize,
       visualizationMode,
-      biomeWeights: [...biomeWeights],
       noiseDetail,
       noiseFalloff,
       elevationOctaves,
@@ -267,16 +218,14 @@ export default function WorldGenerator() {
   };
 
   return (
-    <div className="flex flex-col md:flex-row w-full h-full gap-4">
-      <div className="w-full md:w-1/3 lg:w-1/4 overflow-y-auto max-h-screen p-4 bg-gray-800 text-white">
+    <div className="flex flex-col md:flex-row max-h-screen overflow-hidden">
+      <div className="w-full md:w-1/3 lg:w-1/4 overflow-y-auto p-4 bg-gray-800">
         <GenerationControls
           // Basic properties
           seed={seed}
           setSeed={setSeed}
           visualizationMode={visualizationMode}
           setVisualizationMode={setVisualizationMode}
-          biomePreset={biomePreset}
-          setBiomePreset={setBiomePreset}
           // Noise properties
           noiseDetail={noiseDetail}
           setNoiseDetail={setNoiseDetail}
@@ -303,7 +252,7 @@ export default function WorldGenerator() {
           setElevationTempEffect={setElevationTempEffect}
           temperatureBandScale={temperatureBandScale}
           setTemperatureBandScale={setTemperatureBandScale}
-          // Add the new temperature controls
+          // New temperature controls
           temperatureNoiseScale={temperatureNoiseScale}
           setTemperatureNoiseScale={setTemperatureNoiseScale}
           temperatureNoiseOctaves={temperatureNoiseOctaves}
@@ -325,33 +274,23 @@ export default function WorldGenerator() {
           setRadialFalloffExponent={setRadialFalloffExponent}
           radialStrength={radialStrength}
           setRadialStrength={setRadialStrength}
-          // Biome properties
-          biomeWeights={biomeWeights}
-          setBiomeWeights={setBiomeWeights}
-          customWeights={customWeights}
-          setCustomWeights={setCustomWeights}
-          // UI state
-          showWeightEditor={showWeightEditor}
-          setShowWeightEditor={setShowWeightEditor}
-          // Actions
-          generateNewSeed={generateNewSeed}
-          applyCustomWeights={applyCustomWeights}
-          // Threshold controls
+          // Threshold properties
           moistureThresholds={moistureThresholds}
           setMoistureThresholds={setMoistureThresholds}
           temperatureThresholds={temperatureThresholds}
           setTemperatureThresholds={setTemperatureThresholds}
+          // Actions
+          generateNewSeed={generateNewSeed}
         />
       </div>
 
-      <div className="flex-1 h-screen bg-black relative">
+      <div className="flex-1 flex items-center justify-center bg-black relative">
         <WorldMap
           width={WINDOW_WIDTH}
           height={WINDOW_HEIGHT}
           tileSize={currentGenParams.tileSize}
           seed={currentGenParams.seed}
           debug={currentGenParams.debug}
-          biomeWeights={currentGenParams.biomeWeights}
           noiseDetail={currentGenParams.noiseDetail}
           noiseFalloff={currentGenParams.noiseFalloff}
           visualizationMode={currentGenParams.visualizationMode}

@@ -14,7 +14,6 @@ import {
 import NoiseControls from "./NoiseControls";
 import ClimateControls from "./ClimateControls";
 import RadialGradientControls from "./RadialGradientControls";
-import BiomeControls from "./BiomeControls";
 import GeneralControls from "./GeneralControls";
 import ThresholdControls from "./ThresholdControls";
 
@@ -24,8 +23,6 @@ interface GenerationControlsProps {
   setSeed: (value: number) => void;
   visualizationMode: VisualizationMode;
   setVisualizationMode: (mode: VisualizationMode) => void;
-  biomePreset: string;
-  setBiomePreset: (preset: string) => void;
 
   // Noise properties
   noiseDetail: number;
@@ -78,19 +75,8 @@ interface GenerationControlsProps {
   radialStrength: number;
   setRadialStrength: (value: number) => void;
 
-  // Biome properties
-  biomeWeights: number[];
-  setBiomeWeights: (weights: number[]) => void;
-  customWeights: number[];
-  setCustomWeights: (weights: number[]) => void;
-
-  // UI state
-  showWeightEditor: boolean;
-  setShowWeightEditor: (show: boolean) => void;
-
   // Actions
   generateNewSeed: () => void;
-  applyCustomWeights: () => void;
 
   // Add threshold properties
   moistureThresholds?: typeof MOISTURE_THRESHOLDS;
@@ -133,11 +119,7 @@ const GenerationControls: React.FC<GenerationControlsProps> = (props) => {
                 setSeed={props.setSeed}
                 visualizationMode={props.visualizationMode}
                 setVisualizationMode={props.setVisualizationMode}
-                biomePreset={props.biomePreset}
-                setBiomePreset={props.setBiomePreset}
                 generateNewSeed={props.generateNewSeed}
-                showWeightEditor={props.showWeightEditor}
-                setShowWeightEditor={props.setShowWeightEditor}
               />
             </div>
           )}
@@ -210,16 +192,20 @@ const GenerationControls: React.FC<GenerationControlsProps> = (props) => {
                 setElevationTempEffect={props.setElevationTempEffect}
                 temperatureBandScale={props.temperatureBandScale}
                 setTemperatureBandScale={props.setTemperatureBandScale}
-                noiseScale={props.temperatureNoiseScale}
-                setNoiseScale={props.setTemperatureNoiseScale}
-                noiseOctaves={props.temperatureNoiseOctaves}
-                setNoiseOctaves={props.setTemperatureNoiseOctaves}
-                noisePersistence={props.temperatureNoisePersistence}
-                setNoisePersistence={props.setTemperatureNoisePersistence}
-                polarTemperature={props.polarTemperature}
-                setPolarTemperature={props.setPolarTemperature}
-                equatorTemperature={props.equatorTemperature}
-                setEquatorTemperature={props.setEquatorTemperature}
+                noiseScale={props.temperatureNoiseScale || 0}
+                setNoiseScale={props.setTemperatureNoiseScale || (() => {})}
+                noiseOctaves={props.temperatureNoiseOctaves || 0}
+                setNoiseOctaves={props.setTemperatureNoiseOctaves || (() => {})}
+                noisePersistence={props.temperatureNoisePersistence || 0}
+                setNoisePersistence={
+                  props.setTemperatureNoisePersistence || (() => {})
+                }
+                polarTemperature={props.polarTemperature || 0}
+                setPolarTemperature={props.setPolarTemperature || (() => {})}
+                equatorTemperature={props.equatorTemperature || 0}
+                setEquatorTemperature={
+                  props.setEquatorTemperature || (() => {})
+                }
               />
             </div>
           )}
@@ -248,30 +234,6 @@ const GenerationControls: React.FC<GenerationControlsProps> = (props) => {
                 setRadialFalloffExponent={props.setRadialFalloffExponent}
                 radialStrength={props.radialStrength}
                 setRadialStrength={props.setRadialStrength}
-              />
-            </div>
-          )}
-        </div>
-
-        {/* Biome Controls Section */}
-        <div className="border border-gray-700 rounded-lg overflow-hidden">
-          <button
-            onClick={() => toggleSection("biomes")}
-            className="w-full flex justify-between items-center p-3 bg-gray-700 hover:bg-gray-600 transition text-left"
-          >
-            <span className="font-medium">Biome Distribution</span>
-            <span>{activeSection === "biomes" ? "▼" : "►"}</span>
-          </button>
-
-          {activeSection === "biomes" && (
-            <div className="p-3">
-              <BiomeControls
-                biomeWeights={props.biomeWeights}
-                setBiomeWeights={props.setBiomeWeights}
-                customWeights={props.customWeights}
-                setCustomWeights={props.setCustomWeights}
-                applyCustomWeights={props.applyCustomWeights}
-                showWeightEditor={props.showWeightEditor}
               />
             </div>
           )}
@@ -320,7 +282,6 @@ const GenerationControls: React.FC<GenerationControlsProps> = (props) => {
                   falloffExponent: props.radialFalloffExponent,
                   strength: props.radialStrength,
                 }}
-                biomeWeights={props.biomeWeights}
                 moistureThresholds={
                   props.moistureThresholds || MOISTURE_THRESHOLDS
                 }

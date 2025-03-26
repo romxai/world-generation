@@ -9,14 +9,9 @@ import {
   DEFAULT_TILE_SIZE,
   WORLD_GRID_WIDTH,
   WORLD_GRID_HEIGHT,
-  BIOME_PRESETS,
-  TerrainType,
   VisualizationMode,
-  TERRAIN_NAMES,
   NOISE_DETAIL,
   NOISE_FALLOFF,
-  calculateTerrainHeights,
-  ALL_TERRAIN_TYPES,
   DEFAULT_OCTAVES,
   DEFAULT_ELEVATION_SCALE,
   DEFAULT_MOISTURE_SCALE,
@@ -41,10 +36,6 @@ export default function Home() {
   // Visualization and biome settings
   const [visualizationMode, setVisualizationMode] = useState<VisualizationMode>(
     VisualizationMode.BIOME
-  );
-  const [biomePreset, setBiomePreset] = useState<string>("WORLD");
-  const [biomeWeights, setBiomeWeights] = useState<number[]>(
-    BIOME_PRESETS.WORLD
   );
 
   // Advanced noise settings
@@ -113,12 +104,6 @@ export default function Home() {
     DEFAULT_RADIAL_PARAMS.strength || 0.7
   );
 
-  // UI state
-  const [showWeightEditor, setShowWeightEditor] = useState(false);
-  const [customWeights, setCustomWeights] = useState<number[]>([
-    ...BIOME_PRESETS.WORLD,
-  ]);
-
   // Controls UI state
   const [showControls, setShowControls] = useState(true);
 
@@ -128,7 +113,6 @@ export default function Home() {
     debug,
     tileSize,
     visualizationMode,
-    biomeWeights: [...biomeWeights],
     noiseDetail,
     noiseFalloff,
     elevationOctaves,
@@ -158,34 +142,6 @@ export default function Home() {
     },
   });
 
-  // Recalculate terrain heights preview when weights change
-  const [terrainHeightsPreview, setTerrainHeightsPreview] = useState(
-    calculateTerrainHeights(biomeWeights)
-  );
-
-  // Handle biome preset changes
-  useEffect(() => {
-    if (biomePreset === "CUSTOM") {
-      setBiomeWeights([...customWeights]);
-    } else {
-      const preset = BIOME_PRESETS[biomePreset as keyof typeof BIOME_PRESETS];
-      if (preset) {
-        //setBiomeWeights([...preset]);
-
-        // Update the custom weights when switching to custom preset
-        // This helps users start with the currently selected preset as a base
-        if (biomePreset !== "CUSTOM") {
-          //setCustomWeights([...preset]);
-        }
-      }
-    }
-  }, [biomePreset, customWeights]);
-
-  // Update terrain heights preview when weights change
-  useEffect(() => {
-    setTerrainHeightsPreview(calculateTerrainHeights(biomeWeights));
-  }, [biomeWeights]);
-
   // Update visualization mode immediately
   useEffect(() => {
     setCurrentGenParams((prev) => ({
@@ -199,24 +155,6 @@ export default function Home() {
     const newSeed = Math.floor(Math.random() * 10000);
     setSeed(newSeed);
     handleGenerateWorld(newSeed);
-  };
-
-  // Handle custom weight changes
-  const handleWeightChange = (index: number, value: number) => {
-    const newWeights = [...customWeights];
-    newWeights[index] = Math.max(0, value); // Ensure weights are non-negative
-    setCustomWeights(newWeights);
-
-    // If currently using custom preset, update the active weights
-    if (biomePreset === "CUSTOM") {
-      setBiomeWeights([...newWeights]);
-    }
-  };
-
-  // Apply custom weights and switch to custom preset
-  const applyCustomWeights = () => {
-    setBiomePreset("CUSTOM");
-    setBiomeWeights([...customWeights]);
   };
 
   // Generate world with current parameters
@@ -235,15 +173,11 @@ export default function Home() {
       noiseSeed: newSeed !== undefined ? newSeed + 2000 : seed + 2000,
     };
 
-    // Log temperature parameters to confirm
-    console.log("Temperature params:", tempParams);
-
     setCurrentGenParams({
       seed: newSeed !== undefined ? newSeed : seed,
       debug,
       tileSize,
       visualizationMode,
-      biomeWeights: [...biomeWeights],
       noiseDetail,
       noiseFalloff,
       elevationOctaves,
@@ -264,130 +198,111 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen p-4 flex flex-col items-center bg-gray-900 text-white">
-      <h1 className="text-3xl font-bold mb-2">Procedural World Generator</h1>
-
-      <div className="w-full max-w-6xl flex justify-between items-center mb-3">
-        <button
-          onClick={() => setShowControls(!showControls)}
-          className="bg-blue-700 px-4 py-2 rounded-lg hover:bg-blue-800 transition"
-        >
-          {showControls ? "Hide Controls" : "Show Controls"}
-        </button>
-
-        <button
-          onClick={() => handleGenerateWorld()}
-          className="bg-green-600 px-4 py-2 rounded-lg hover:bg-green-700 transition text-lg font-semibold"
-        >
-          Generate World
-        </button>
+    <main className="flex min-h-screen flex-col bg-gray-900 text-white">
+      <div className="p-4 bg-black bg-opacity-50 shadow-md mb-4 w-full">
+        <h1 className="text-2xl font-bold">Procedural World Generator</h1>
+        <div className="mt-2 flex justify-between items-center">
+          <button
+            onClick={() => setShowControls(!showControls)}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded transition"
+          >
+            {showControls ? "Hide Controls" : "Show Controls"}
+          </button>
+          <div>
+            <button
+              onClick={generateNewSeed}
+              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded transition mr-2"
+            >
+              Generate New World
+            </button>
+          </div>
+        </div>
       </div>
 
-      {showControls && (
-        <div className="w-full max-w-6xl mb-4">
-          {/* Main controls using the new UI components */}
-          <GenerationControls
-            // Basic properties
-            seed={seed}
-            setSeed={setSeed}
-            visualizationMode={visualizationMode}
-            setVisualizationMode={setVisualizationMode}
-            biomePreset={biomePreset}
-            setBiomePreset={setBiomePreset}
-            // Noise properties
-            noiseDetail={noiseDetail}
-            setNoiseDetail={setNoiseDetail}
-            noiseFalloff={noiseFalloff}
-            setNoiseFalloff={setNoiseFalloff}
-            elevationOctaves={elevationOctaves}
-            setElevationOctaves={setElevationOctaves}
-            moistureOctaves={moistureOctaves}
-            setMoistureOctaves={setMoistureOctaves}
-            elevationScale={elevationScale}
-            setElevationScale={setElevationScale}
-            moistureScale={moistureScale}
-            setMoistureScale={setMoistureScale}
-            elevationPersistence={elevationPersistence}
-            setElevationPersistence={setElevationPersistence}
-            moisturePersistence={moisturePersistence}
-            setMoisturePersistence={setMoisturePersistence}
-            // Climate properties
-            equatorPosition={equatorPosition}
-            setEquatorPosition={setEquatorPosition}
-            temperatureVariance={temperatureVariance}
-            setTemperatureVariance={setTemperatureVariance}
-            elevationTempEffect={elevationTempEffect}
-            setElevationTempEffect={setElevationTempEffect}
-            temperatureBandScale={temperatureBandScale}
-            setTemperatureBandScale={setTemperatureBandScale}
-            // Add the new temperature controls
-            temperatureNoiseScale={temperatureNoiseScale}
-            setTemperatureNoiseScale={setTemperatureNoiseScale}
-            temperatureNoiseOctaves={temperatureNoiseOctaves}
-            setTemperatureNoiseOctaves={setTemperatureNoiseOctaves}
-            temperatureNoisePersistence={temperatureNoisePersistence}
-            setTemperatureNoisePersistence={setTemperatureNoisePersistence}
-            polarTemperature={polarTemperature}
-            setPolarTemperature={setPolarTemperature}
-            equatorTemperature={equatorTemperature}
-            setEquatorTemperature={setEquatorTemperature}
-            // Radial gradient properties
-            radialCenterX={radialCenterX}
-            setRadialCenterX={setRadialCenterX}
-            radialCenterY={radialCenterY}
-            setRadialCenterY={setRadialCenterY}
-            radialRadius={radialRadius}
-            setRadialRadius={setRadialRadius}
-            radialFalloffExponent={radialFalloffExponent}
-            setRadialFalloffExponent={setRadialFalloffExponent}
-            radialStrength={radialStrength}
-            setRadialStrength={setRadialStrength}
-            // Biome properties
-            biomeWeights={biomeWeights}
-            setBiomeWeights={setBiomeWeights}
-            customWeights={customWeights}
-            setCustomWeights={setCustomWeights}
-            // UI state
-            showWeightEditor={showWeightEditor}
-            setShowWeightEditor={setShowWeightEditor}
-            // Actions
-            generateNewSeed={generateNewSeed}
-            applyCustomWeights={applyCustomWeights}
+      <div className="flex-1 flex flex-col md:flex-row">
+        {showControls && (
+          <div className="w-full md:w-1/3 lg:w-1/4 overflow-y-auto max-h-screen p-4 bg-gray-800">
+            <GenerationControls
+              // Basic properties
+              seed={seed}
+              setSeed={setSeed}
+              visualizationMode={visualizationMode}
+              setVisualizationMode={setVisualizationMode}
+              // Noise properties
+              noiseDetail={noiseDetail}
+              setNoiseDetail={setNoiseDetail}
+              noiseFalloff={noiseFalloff}
+              setNoiseFalloff={setNoiseFalloff}
+              elevationOctaves={elevationOctaves}
+              setElevationOctaves={setElevationOctaves}
+              moistureOctaves={moistureOctaves}
+              setMoistureOctaves={setMoistureOctaves}
+              elevationScale={elevationScale}
+              setElevationScale={setElevationScale}
+              moistureScale={moistureScale}
+              setMoistureScale={setMoistureScale}
+              elevationPersistence={elevationPersistence}
+              setElevationPersistence={setElevationPersistence}
+              moisturePersistence={moisturePersistence}
+              setMoisturePersistence={setMoisturePersistence}
+              // Climate properties
+              equatorPosition={equatorPosition}
+              setEquatorPosition={setEquatorPosition}
+              temperatureVariance={temperatureVariance}
+              setTemperatureVariance={setTemperatureVariance}
+              elevationTempEffect={elevationTempEffect}
+              setElevationTempEffect={setElevationTempEffect}
+              temperatureBandScale={temperatureBandScale}
+              setTemperatureBandScale={setTemperatureBandScale}
+              // Add the new temperature controls
+              temperatureNoiseScale={temperatureNoiseScale}
+              setTemperatureNoiseScale={setTemperatureNoiseScale}
+              temperatureNoiseOctaves={temperatureNoiseOctaves}
+              setTemperatureNoiseOctaves={setTemperatureNoiseOctaves}
+              temperatureNoisePersistence={temperatureNoisePersistence}
+              setTemperatureNoisePersistence={setTemperatureNoisePersistence}
+              polarTemperature={polarTemperature}
+              setPolarTemperature={setPolarTemperature}
+              equatorTemperature={equatorTemperature}
+              setEquatorTemperature={setEquatorTemperature}
+              // Radial gradient properties
+              radialCenterX={radialCenterX}
+              setRadialCenterX={setRadialCenterX}
+              radialCenterY={radialCenterY}
+              setRadialCenterY={setRadialCenterY}
+              radialRadius={radialRadius}
+              setRadialRadius={setRadialRadius}
+              radialFalloffExponent={radialFalloffExponent}
+              setRadialFalloffExponent={setRadialFalloffExponent}
+              radialStrength={radialStrength}
+              setRadialStrength={setRadialStrength}
+              // Actions
+              generateNewSeed={generateNewSeed}
+            />
+          </div>
+        )}
+
+        <div className="flex-1 flex items-center justify-center bg-black relative">
+          <WorldMap
+            width={WINDOW_WIDTH}
+            height={WINDOW_HEIGHT}
+            tileSize={currentGenParams.tileSize}
+            seed={currentGenParams.seed}
+            debug={currentGenParams.debug}
+            noiseDetail={currentGenParams.noiseDetail}
+            noiseFalloff={currentGenParams.noiseFalloff}
+            visualizationMode={currentGenParams.visualizationMode}
+            elevationOctaves={currentGenParams.elevationOctaves}
+            moistureOctaves={currentGenParams.moistureOctaves}
+            elevationScale={currentGenParams.elevationScale}
+            moistureScale={currentGenParams.moistureScale}
+            elevationPersistence={currentGenParams.elevationPersistence}
+            moisturePersistence={currentGenParams.moisturePersistence}
+            temperatureParams={currentGenParams.temperatureParams}
+            radialGradientParams={currentGenParams.radialGradientParams}
           />
         </div>
-      )}
-
-      {/* The world map visualization */}
-      <div
-        className={`w-full max-w-6xl ${
-          !showControls ? "mt-3" : ""
-        } mb-4 relative bg-black rounded-lg overflow-hidden`}
-      >
-        <WorldMap
-          width={WINDOW_WIDTH}
-          height={WINDOW_HEIGHT}
-          tileSize={currentGenParams.tileSize}
-          seed={currentGenParams.seed}
-          debug={currentGenParams.debug}
-          biomeWeights={currentGenParams.biomeWeights}
-          noiseDetail={currentGenParams.noiseDetail}
-          noiseFalloff={currentGenParams.noiseFalloff}
-          visualizationMode={currentGenParams.visualizationMode}
-          elevationOctaves={currentGenParams.elevationOctaves}
-          moistureOctaves={currentGenParams.moistureOctaves}
-          elevationScale={currentGenParams.elevationScale}
-          moistureScale={currentGenParams.moistureScale}
-          elevationPersistence={currentGenParams.elevationPersistence}
-          moisturePersistence={currentGenParams.moisturePersistence}
-          temperatureParams={currentGenParams.temperatureParams}
-          radialGradientParams={currentGenParams.radialGradientParams}
-        />
       </div>
-
-      <footer className="text-sm text-gray-500 mt-4">
-        Use mouse wheel to zoom, drag to pan, and click "Generate World" to
-        apply your changes.
-      </footer>
-    </div>
+    </main>
   );
 }
