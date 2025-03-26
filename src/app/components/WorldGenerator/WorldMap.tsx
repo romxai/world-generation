@@ -48,6 +48,7 @@ import {
 } from "./config";
 import { WorldGenerator, WorldGeneratorConfig } from "./worldGenerator";
 import { rgbToString } from "./terrainUtils";
+import ProgressBar from "./UI/ProgressBar";
 
 // Define the ContinentalFalloffParams interface
 export interface ContinentalFalloffParams {
@@ -108,7 +109,9 @@ interface WorldMapProps {
   // Add threshold parameters
   moistureThresholds?: typeof MOISTURE_THRESHOLDS;
   temperatureThresholds?: typeof TEMPERATURE_THRESHOLDS;
-
+  // Progress tracking
+  isGenerating?: boolean;
+  generationProgress?: number;
 }
 
 interface CameraState {
@@ -159,6 +162,9 @@ const WorldMap: React.FC<WorldMapProps> = ({
   // Add threshold parameters with defaults
   moistureThresholds = MOISTURE_THRESHOLDS,
   temperatureThresholds = TEMPERATURE_THRESHOLDS,
+  // Progress tracking
+  isGenerating = false,
+  generationProgress = 0,
 }) => {
   // Canvas and rendering references
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -208,7 +214,6 @@ const WorldMap: React.FC<WorldMapProps> = ({
       radialGradientParams,
       moistureThresholds,
       temperatureThresholds,
-
     })
   );
 
@@ -226,7 +231,6 @@ const WorldMap: React.FC<WorldMapProps> = ({
       radialGradientParams,
       moistureThresholds,
       temperatureThresholds,
-
     });
     setMapChanged(true);
   }, [
@@ -241,7 +245,6 @@ const WorldMap: React.FC<WorldMapProps> = ({
     radialGradientParams,
     moistureThresholds,
     temperatureThresholds,
-
   ]);
 
   // Re-render map when visualization mode or biome weights change
@@ -593,36 +596,150 @@ const WorldMap: React.FC<WorldMapProps> = ({
     [camera, tileSize, width, height]
   );
 
+  // Add pan/zoom state
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const lastPosRef = useRef({ x: 0, y: 0 });
+
+  // Pan functionality
+  const handleMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      if (canvasRef.current) {
+        setIsDragging(true);
+        setDragStart({ x: e.clientX, y: e.clientY });
+        lastPosRef.current = { x: camera.x, y: camera.y };
+      }
+    },
+    [camera]
+  );
+
+  const handleMouseMove = useCallback(
+    (e: React.MouseEvent) => {
+      if (isDragging && canvasRef.current) {
+        const dx = (e.clientX - dragStart.x) / camera.zoom;
+        const dy = (e.clientY - dragStart.y) / camera.zoom;
+        setCamera({
+          ...camera,
+          x: lastPosRef.current.x + dx,
+          y: lastPosRef.current.y + dy,
+        });
+      }
+    },
+    [isDragging, dragStart, camera]
+  );
+
+  const handleMouseUp = useCallback(() => {
+    setIsDragging(false);
+  }, []);
+
+  // Zoom functionality with mouse wheel
+  const handleWheel = useCallback(
+    (e: React.WheelEvent) => {
+      e.preventDefault();
+
+      // Calculate new zoom level
+      const zoomDelta = -e.deltaY * 0.001;
+      const newZoom = Math.max(
+        MIN_ZOOM,
+        Math.min(MAX_ZOOM, camera.zoom * (1 + zoomDelta))
+      );
+
+      // Get the mouse position relative to the canvas
+      const rect = canvasRef.current?.getBoundingClientRect();
+      if (!rect) return;
+
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+
+      // Calculate the world position under the mouse before zooming
+      const worldXBefore = mouseX / camera.zoom - camera.x;
+      const worldYBefore = mouseY / camera.zoom - camera.y;
+
+      // Calculate the world position under the mouse after zooming
+      const worldXAfter = mouseX / newZoom - camera.x;
+      const worldYAfter = mouseY / newZoom - camera.y;
+
+      // Adjust camera position to keep the world position under the mouse constant
+      setCamera({
+        x: camera.x + (worldXAfter - worldXBefore),
+        y: camera.y + (worldYAfter - worldYBefore),
+        zoom: newZoom,
+      });
+    },
+    [camera]
+  );
+
+  // Touch support for mobile
+  const handleTouchStart = useCallback(
+    (e: React.TouchEvent) => {
+      if (e.touches.length === 1) {
+        // Single touch - panning
+        setIsDragging(true);
+        setDragStart({
+          x: e.touches[0].clientX,
+          y: e.touches[0].clientY,
+        });
+        lastPosRef.current = { x: camera.x, y: camera.y };
+      }
+    },
+    [camera]
+  );
+
+  const handleTouchMove = useCallback(
+    (e: React.TouchEvent) => {
+      if (isDragging && e.touches.length === 1) {
+        // Single touch - panning
+        const dx = (e.touches[0].clientX - dragStart.x) / camera.zoom;
+        const dy = (e.touches[0].clientY - dragStart.y) / camera.zoom;
+        setCamera({
+          ...camera,
+          x: lastPosRef.current.x + dx,
+          y: lastPosRef.current.y + dy,
+        });
+      }
+    },
+    [isDragging, dragStart, camera]
+  );
+
+  const handleTouchEnd = useCallback(() => {
+    setIsDragging(false);
+  }, []);
+
   return (
-    <div className="world-map-container" style={{ position: "relative" }}>
+    <div
+      className="relative w-full h-full"
+      style={{ cursor: isDragging ? "grabbing" : "grab" }}
+    >
       <canvas
         ref={canvasRef}
         width={width}
         height={height}
-        style={{
-          border: "1px solid #000",
-          backgroundColor: "#333",
-        }}
+        className="cursor-grab"
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
+        onWheel={handleWheel}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
       />
+
       {debug && (
-        <div
-          style={{
-            position: "absolute",
-            bottom: "10px",
-            left: "10px",
-            background: "rgba(0, 0, 0, 0.7)",
-            color: "white",
-            padding: "5px",
-            borderRadius: "3px",
-            fontSize: "12px",
-            fontFamily: "monospace",
-            whiteSpace: "nowrap",
-            textOverflow: "ellipsis",
-          }}
-        >
-          {debugInfo}
+        <div className="absolute top-2 left-2 bg-black bg-opacity-50 p-2 rounded text-white text-xs">
+          <div>Seed: {seed}</div>
+          <div>Zoom: {camera.zoom.toFixed(2)}</div>
         </div>
       )}
+
+      {debugInfo && (
+        <div className="absolute bottom-2 left-2 bg-black bg-opacity-75 p-2 rounded text-white text-xs max-w-xs">
+          <pre>{debugInfo}</pre>
+        </div>
+      )}
+
+      {/* Progress bar overlay */}
+      {isGenerating && <ProgressBar progress={generationProgress} />}
     </div>
   );
 };

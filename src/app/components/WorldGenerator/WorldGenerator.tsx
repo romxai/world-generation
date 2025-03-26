@@ -34,6 +34,9 @@ export default function WorldGenerator() {
   const [seed, setSeed] = useState(DEFAULT_SEED);
   const [debug, setDebug] = useState(true);
   const [tileSize, setTileSize] = useState(DEFAULT_TILE_SIZE);
+  // Add loading state for progress bar
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generationProgress, setGenerationProgress] = useState(0);
 
   // Visualization and biome settings
   const [visualizationMode, setVisualizationMode] = useState<VisualizationMode>(
@@ -170,51 +173,81 @@ export default function WorldGenerator() {
 
   // Generate a new random seed
   const generateNewSeed = () => {
+    // Generate a new random seed
     const newSeed = Math.floor(Math.random() * 10000);
     setSeed(newSeed);
+    // Use the new seed to generate the world
     handleGenerateWorld(newSeed);
   };
 
   // Generate world with current parameters
   const handleGenerateWorld = (newSeed?: number) => {
-    // Create the temperature parameters object
-    const tempParams = {
-      equatorPosition,
-      temperatureVariance,
-      elevationEffect: elevationTempEffect,
-      bandScale: temperatureBandScale,
-      noiseScale: temperatureNoiseScale,
-      noiseOctaves: temperatureNoiseOctaves,
-      noisePersistence: temperatureNoisePersistence,
-      polarTemperature: polarTemperature,
-      equatorTemperature: equatorTemperature,
-      noiseSeed: newSeed !== undefined ? newSeed + 2000 : seed + 2000,
-    };
+    // Start generation progress
+    setIsGenerating(true);
+    setGenerationProgress(5);
 
-    setCurrentGenParams({
-      seed: newSeed !== undefined ? newSeed : seed,
-      debug,
-      tileSize,
-      visualizationMode,
-      noiseDetail,
-      noiseFalloff,
-      elevationOctaves,
-      moistureOctaves,
-      elevationScale,
-      moistureScale,
-      elevationPersistence,
-      moisturePersistence,
-      temperatureParams: tempParams,
-      radialGradientParams: {
-        centerX: radialCenterX,
-        centerY: radialCenterY,
-        radius: radialRadius,
-        falloffExponent: radialFalloffExponent,
-        strength: radialStrength,
-      },
-      moistureThresholds,
-      temperatureThresholds,
-    });
+    // Use timeout to allow UI to update before generation starts
+    setTimeout(() => {
+      // Create the temperature parameters object
+      const tempParams = {
+        equatorPosition,
+        temperatureVariance,
+        elevationEffect: elevationTempEffect,
+        bandScale: temperatureBandScale,
+        noiseScale: temperatureNoiseScale,
+        noiseOctaves: temperatureNoiseOctaves,
+        noisePersistence: temperatureNoisePersistence,
+        polarTemperature: polarTemperature,
+        equatorTemperature: equatorTemperature,
+        // Use the provided seed or current seed value - don't randomize unless explicitly asked
+        noiseSeed: (newSeed !== undefined ? newSeed : seed) + 2000,
+      };
+
+      // Update progress to show we're configuring
+      setGenerationProgress(25);
+
+      // Short delay to allow progress bar to update
+      setTimeout(() => {
+        setCurrentGenParams({
+          seed: newSeed !== undefined ? newSeed : seed,
+          debug,
+          tileSize,
+          visualizationMode,
+          noiseDetail,
+          noiseFalloff,
+          elevationOctaves,
+          moistureOctaves,
+          elevationScale,
+          moistureScale,
+          elevationPersistence,
+          moisturePersistence,
+          temperatureParams: tempParams,
+          radialGradientParams: {
+            centerX: radialCenterX,
+            centerY: radialCenterY,
+            radius: radialRadius,
+            falloffExponent: radialFalloffExponent,
+            strength: radialStrength,
+          },
+          moistureThresholds,
+          temperatureThresholds,
+        });
+
+        // Update progress to show we're generating world data
+        setGenerationProgress(50);
+
+        // Allow render to happen before finishing progress
+        setTimeout(() => {
+          setGenerationProgress(75);
+          setTimeout(() => {
+            setGenerationProgress(100);
+            setTimeout(() => {
+              setIsGenerating(false);
+            }, 300);
+          }, 300);
+        }, 300);
+      }, 200);
+    }, 100);
   };
 
   return (
@@ -281,10 +314,11 @@ export default function WorldGenerator() {
           setTemperatureThresholds={setTemperatureThresholds}
           // Actions
           generateNewSeed={generateNewSeed}
+          handleGenerateWorld={handleGenerateWorld}
         />
       </div>
 
-      <div className="flex-1 flex items-center justify-center bg-black relative">
+      <div className="w-full md:w-2/3 lg:w-3/4 flex items-center justify-center bg-gray-900 relative">
         <WorldMap
           width={WINDOW_WIDTH}
           height={WINDOW_HEIGHT}
@@ -304,6 +338,8 @@ export default function WorldGenerator() {
           radialGradientParams={currentGenParams.radialGradientParams}
           moistureThresholds={currentGenParams.moistureThresholds}
           temperatureThresholds={currentGenParams.temperatureThresholds}
+          isGenerating={isGenerating}
+          generationProgress={generationProgress}
         />
       </div>
     </div>

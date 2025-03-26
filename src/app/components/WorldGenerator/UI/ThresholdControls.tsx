@@ -7,6 +7,7 @@
 import React, { useState } from "react";
 import { MOISTURE_THRESHOLDS, TEMPERATURE_THRESHOLDS } from "../config";
 import Slider from "./Slider";
+import InfoIcon from "./InfoIcon";
 
 interface ThresholdControlsProps {
   // Moisture threshold controls
@@ -17,6 +18,26 @@ interface ThresholdControlsProps {
   temperatureThresholds: typeof TEMPERATURE_THRESHOLDS;
   setTemperatureThresholds: (thresholds: typeof TEMPERATURE_THRESHOLDS) => void;
 }
+
+// Tooltips for thresholds
+const MOISTURE_TOOLTIPS = {
+  VERY_DRY:
+    "Controls the boundary below which extremely arid regions like deserts form. Lower values create more deserts.",
+  DRY: "Controls the boundary between arid and semi-arid regions. Affects distribution of steppes, savannas, and dry shrublands.",
+  MEDIUM:
+    "Controls the boundary between moderately dry and moderately wet areas. Affects grasslands and mixed forests.",
+  WET: "Controls the boundary between moderate and high moisture. Higher values create more lush environments like rainforests.",
+};
+
+const TEMPERATURE_TOOLTIPS = {
+  FREEZING:
+    "Controls the boundary for extremely cold regions like ice sheets and tundra. Higher values create more polar regions.",
+  COLD: "Controls the boundary for cold regions like taiga and boreal forests. Affects cold-climate biomes.",
+  COOL: "Controls the boundary for cool temperate regions. Affects distribution of cool mixed forests and temperate grasslands.",
+  MILD: "Controls the boundary for mild temperate regions. Affects temperate deciduous forests and woodlands.",
+  WARM: "Controls the boundary for warm regions like subtropical environments. Affects distribution of warm forests and savannas.",
+  HOT: "Controls the boundary for hot regions. Higher values create more tropical environments like rainforests and tropical deserts.",
+};
 
 const ThresholdControls: React.FC<ThresholdControlsProps> = (props) => {
   // Local state for thresholds
@@ -51,7 +72,10 @@ const ThresholdControls: React.FC<ThresholdControlsProps> = (props) => {
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       {/* Moisture thresholds */}
       <div className="bg-gray-700 p-3 rounded-md">
-        <h4 className="font-medium mb-2">Moisture Thresholds</h4>
+        <div className="flex items-center mb-2">
+          <h4 className="font-medium">Moisture Thresholds</h4>
+          <InfoIcon content="These values control the boundaries between different moisture levels in the world, affecting biome distribution." />
+        </div>
 
         <Slider
           label="Very Dry"
@@ -62,6 +86,7 @@ const ThresholdControls: React.FC<ThresholdControlsProps> = (props) => {
           step={0.01}
           leftLabel={`${moistureThresholds.VERY_DRY.toFixed(2)}`}
           rightLabel="Threshold"
+          tooltip={MOISTURE_TOOLTIPS.VERY_DRY}
         />
 
         <Slider
@@ -73,6 +98,7 @@ const ThresholdControls: React.FC<ThresholdControlsProps> = (props) => {
           step={0.01}
           leftLabel={`${moistureThresholds.DRY.toFixed(2)}`}
           rightLabel="Threshold"
+          tooltip={MOISTURE_TOOLTIPS.DRY}
         />
 
         <Slider
@@ -84,6 +110,7 @@ const ThresholdControls: React.FC<ThresholdControlsProps> = (props) => {
           step={0.01}
           leftLabel={`${moistureThresholds.MEDIUM.toFixed(2)}`}
           rightLabel="Threshold"
+          tooltip={MOISTURE_TOOLTIPS.MEDIUM}
         />
 
         <Slider
@@ -95,12 +122,16 @@ const ThresholdControls: React.FC<ThresholdControlsProps> = (props) => {
           step={0.01}
           leftLabel={`${moistureThresholds.WET.toFixed(2)}`}
           rightLabel="Threshold"
+          tooltip={MOISTURE_TOOLTIPS.WET}
         />
       </div>
 
       {/* Temperature thresholds */}
       <div className="bg-gray-700 p-3 rounded-md">
-        <h4 className="font-medium mb-2">Temperature Thresholds</h4>
+        <div className="flex items-center mb-2">
+          <h4 className="font-medium">Temperature Thresholds</h4>
+          <InfoIcon content="These values control the boundaries between different temperature zones in the world, affecting biome distribution." />
+        </div>
 
         <Slider
           label="Freezing"
@@ -111,6 +142,7 @@ const ThresholdControls: React.FC<ThresholdControlsProps> = (props) => {
           step={0.01}
           leftLabel={`${temperatureThresholds.FREEZING.toFixed(2)}`}
           rightLabel="Threshold"
+          tooltip={TEMPERATURE_TOOLTIPS.FREEZING}
         />
 
         <Slider
@@ -122,6 +154,7 @@ const ThresholdControls: React.FC<ThresholdControlsProps> = (props) => {
           step={0.01}
           leftLabel={`${temperatureThresholds.COLD.toFixed(2)}`}
           rightLabel="Threshold"
+          tooltip={TEMPERATURE_TOOLTIPS.COLD}
         />
 
         <Slider
@@ -133,6 +166,7 @@ const ThresholdControls: React.FC<ThresholdControlsProps> = (props) => {
           step={0.01}
           leftLabel={`${temperatureThresholds.COOL.toFixed(2)}`}
           rightLabel="Threshold"
+          tooltip={TEMPERATURE_TOOLTIPS.COOL}
         />
 
         <Slider
@@ -144,6 +178,7 @@ const ThresholdControls: React.FC<ThresholdControlsProps> = (props) => {
           step={0.01}
           leftLabel={`${temperatureThresholds.MILD.toFixed(2)}`}
           rightLabel="Threshold"
+          tooltip={TEMPERATURE_TOOLTIPS.MILD}
         />
 
         <Slider
@@ -155,6 +190,7 @@ const ThresholdControls: React.FC<ThresholdControlsProps> = (props) => {
           step={0.01}
           leftLabel={`${temperatureThresholds.WARM.toFixed(2)}`}
           rightLabel="Threshold"
+          tooltip={TEMPERATURE_TOOLTIPS.WARM}
         />
 
         <Slider
@@ -166,6 +202,7 @@ const ThresholdControls: React.FC<ThresholdControlsProps> = (props) => {
           step={0.01}
           leftLabel={`${temperatureThresholds.HOT.toFixed(2)}`}
           rightLabel="Threshold"
+          tooltip={TEMPERATURE_TOOLTIPS.HOT}
         />
       </div>
 

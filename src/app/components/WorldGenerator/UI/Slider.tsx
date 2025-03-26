@@ -5,6 +5,7 @@
  */
 
 import React from "react";
+import InfoIcon from "./InfoIcon";
 
 interface SliderProps {
   label: string;
@@ -16,6 +17,7 @@ interface SliderProps {
   leftLabel?: string;
   rightLabel?: string;
   className?: string;
+  tooltip?: string;
 }
 
 const Slider: React.FC<SliderProps> = ({
@@ -28,10 +30,14 @@ const Slider: React.FC<SliderProps> = ({
   leftLabel,
   rightLabel,
   className = "",
+  tooltip,
 }) => {
   return (
     <div className={`flex flex-col gap-1 mb-3 ${className}`}>
-      <label className="text-sm font-medium">{label}</label>
+      <div className="flex items-center">
+        <label className="text-sm font-medium">{label}</label>
+        {tooltip && <InfoIcon content={tooltip} />}
+      </div>
       <input
         type="range"
         min={min}

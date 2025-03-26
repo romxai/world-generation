@@ -85,6 +85,7 @@ interface GenerationControlsProps {
 
   // Actions
   generateNewSeed: () => void;
+  handleGenerateWorld?: (newSeed?: number) => void;
 
   // Add threshold properties
   moistureThresholds?: typeof MOISTURE_THRESHOLDS;
@@ -146,6 +147,7 @@ const GenerationControls: React.FC<GenerationControlsProps> = (props) => {
                 visualizationMode={props.visualizationMode}
                 setVisualizationMode={props.setVisualizationMode}
                 generateNewSeed={props.generateNewSeed}
+                handleGenerateWorld={props.handleGenerateWorld}
               />
             </div>
           )}
@@ -301,7 +303,6 @@ const GenerationControls: React.FC<GenerationControlsProps> = (props) => {
             {activeSection === "thresholds" && (
               <div className="p-3">
                 <ThresholdControls
-                
                   moistureThresholds={props.moistureThresholds}
                   setMoistureThresholds={props.setMoistureThresholds}
                   temperatureThresholds={

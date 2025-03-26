@@ -21,6 +21,20 @@ interface RadialGradientControlsProps {
   setStrength: (value: number) => void;
 }
 
+// Tooltips for each parameter
+const TOOLTIPS = {
+  centerX:
+    "Controls the horizontal position of the continent center. Values closer to 0 move the center left, values closer to 1 move it right.",
+  centerY:
+    "Controls the vertical position of the continent center. Values closer to 0 move the center up, values closer to 1 move it down.",
+  radius:
+    "Determines the size of the central land mass. Larger values create bigger continents, smaller values create smaller landmasses surrounded by more ocean.",
+  falloffExponent:
+    "Controls how sharply the land transitions to ocean. Higher values create more defined coastlines, lower values create gradual transitions.",
+  strength:
+    "Determines how strongly the radial gradient affects elevation. Higher values emphasize the continent-ocean pattern, lower values allow more varied terrain.",
+};
+
 const RadialGradientControls: React.FC<RadialGradientControlsProps> = ({
   centerX,
   setCenterX,
@@ -47,6 +61,7 @@ const RadialGradientControls: React.FC<RadialGradientControlsProps> = ({
           step={0.05}
           leftLabel={`Left (${centerX.toFixed(2)})`}
           rightLabel="Right"
+          tooltip={TOOLTIPS.centerX}
         />
 
         <Slider
@@ -58,6 +73,7 @@ const RadialGradientControls: React.FC<RadialGradientControlsProps> = ({
           step={0.05}
           leftLabel={`Top (${centerY.toFixed(2)})`}
           rightLabel="Bottom"
+          tooltip={TOOLTIPS.centerY}
         />
       </div>
 
@@ -73,6 +89,7 @@ const RadialGradientControls: React.FC<RadialGradientControlsProps> = ({
           step={0.05}
           leftLabel={`Small (${radius.toFixed(2)})`}
           rightLabel="Large"
+          tooltip={TOOLTIPS.radius}
         />
 
         <Slider
@@ -84,6 +101,7 @@ const RadialGradientControls: React.FC<RadialGradientControlsProps> = ({
           step={0.2}
           leftLabel={`Gradual (${falloffExponent.toFixed(1)})`}
           rightLabel="Sharp"
+          tooltip={TOOLTIPS.falloffExponent}
         />
 
         <Slider
@@ -95,6 +113,7 @@ const RadialGradientControls: React.FC<RadialGradientControlsProps> = ({
           step={0.05}
           leftLabel={`Weak (${strength.toFixed(2)})`}
           rightLabel="Strong"
+          tooltip={TOOLTIPS.strength}
         />
       </div>
 
