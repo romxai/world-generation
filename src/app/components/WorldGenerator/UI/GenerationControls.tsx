@@ -301,6 +301,7 @@ const GenerationControls: React.FC<GenerationControlsProps> = (props) => {
             {activeSection === "thresholds" && (
               <div className="p-3">
                 <ThresholdControls
+                
                   moistureThresholds={props.moistureThresholds}
                   setMoistureThresholds={props.setMoistureThresholds}
                   temperatureThresholds={

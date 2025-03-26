@@ -9,29 +9,29 @@ import React from "react";
 import Slider from "./Slider";
 
 interface RadialGradientControlsProps {
-  radialCenterX: number;
-  setRadialCenterX: (value: number) => void;
-  radialCenterY: number;
-  setRadialCenterY: (value: number) => void;
-  radialRadius: number;
-  setRadialRadius: (value: number) => void;
-  radialFalloffExponent: number;
-  setRadialFalloffExponent: (value: number) => void;
-  radialStrength: number;
-  setRadialStrength: (value: number) => void;
+  centerX: number;
+  setCenterX: (value: number) => void;
+  centerY: number;
+  setCenterY: (value: number) => void;
+  radius: number;
+  setRadius: (value: number) => void;
+  falloffExponent: number;
+  setFalloffExponent: (value: number) => void;
+  strength: number;
+  setStrength: (value: number) => void;
 }
 
 const RadialGradientControls: React.FC<RadialGradientControlsProps> = ({
-  radialCenterX,
-  setRadialCenterX,
-  radialCenterY,
-  setRadialCenterY,
-  radialRadius,
-  setRadialRadius,
-  radialFalloffExponent,
-  setRadialFalloffExponent,
-  radialStrength,
-  setRadialStrength,
+  centerX,
+  setCenterX,
+  centerY,
+  setCenterY,
+  radius,
+  setRadius,
+  falloffExponent,
+  setFalloffExponent,
+  strength,
+  setStrength,
 }) => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -40,23 +40,23 @@ const RadialGradientControls: React.FC<RadialGradientControlsProps> = ({
 
         <Slider
           label="Center X Position"
-          value={radialCenterX}
-          onChange={setRadialCenterX}
+          value={centerX}
+          onChange={setCenterX}
           min={0}
           max={1}
           step={0.05}
-          leftLabel={`Left (${radialCenterX.toFixed(2)})`}
+          leftLabel={`Left (${centerX.toFixed(2)})`}
           rightLabel="Right"
         />
 
         <Slider
           label="Center Y Position"
-          value={radialCenterY}
-          onChange={setRadialCenterY}
+          value={centerY}
+          onChange={setCenterY}
           min={0}
           max={1}
           step={0.05}
-          leftLabel={`Top (${radialCenterY.toFixed(2)})`}
+          leftLabel={`Top (${centerY.toFixed(2)})`}
           rightLabel="Bottom"
         />
       </div>
@@ -66,34 +66,34 @@ const RadialGradientControls: React.FC<RadialGradientControlsProps> = ({
 
         <Slider
           label="Inner Radius"
-          value={radialRadius}
-          onChange={setRadialRadius}
+          value={radius}
+          onChange={setRadius}
           min={0.1}
           max={0.9}
           step={0.05}
-          leftLabel={`Small (${radialRadius.toFixed(2)})`}
+          leftLabel={`Small (${radius.toFixed(2)})`}
           rightLabel="Large"
         />
 
         <Slider
           label="Falloff Exponent"
-          value={radialFalloffExponent}
-          onChange={setRadialFalloffExponent}
+          value={falloffExponent}
+          onChange={setFalloffExponent}
           min={1}
           max={5}
           step={0.2}
-          leftLabel={`Gradual (${radialFalloffExponent.toFixed(1)})`}
+          leftLabel={`Gradual (${falloffExponent.toFixed(1)})`}
           rightLabel="Sharp"
         />
 
         <Slider
           label="Effect Strength"
-          value={radialStrength}
-          onChange={setRadialStrength}
+          value={strength}
+          onChange={setStrength}
           min={0}
           max={1}
           step={0.05}
-          leftLabel={`Weak (${radialStrength.toFixed(2)})`}
+          leftLabel={`Weak (${strength.toFixed(2)})`}
           rightLabel="Strong"
         />
       </div>

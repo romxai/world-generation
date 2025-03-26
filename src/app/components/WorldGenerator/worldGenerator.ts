@@ -68,8 +68,8 @@ export interface WorldGeneratorConfig {
   moisturePersistence: number;
   temperatureParams: TemperatureParams;
   radialGradientParams: RadialGradientParams;
-  moistureThresholds?: any; // Using 'any' temporarily, ideally should be properly typed
-  temperatureThresholds?: any; // Using 'any' temporarily
+  moistureThresholds?: Record<string, number>; // More specific type for moisture thresholds
+  temperatureThresholds?: Record<string, number>; // More specific type for temperature thresholds
   resourceConfigs?: Record<ResourceType, ResourceConfig>; // Configuration for resource generation
 }
 
@@ -82,8 +82,8 @@ export class WorldGenerator {
   private resourceNoise: Record<ResourceType, OctaveNoise>; // Noise generators for each resource
   private config: WorldGeneratorConfig;
   private temperatureMapper: TemperatureMapper;
-  private moistureThresholds: any; // Using 'any' temporarily
-  private temperatureThresholds: any; // Using 'any' temporarily
+  private moistureThresholds: Record<string, number>; // More specific type
+  private temperatureThresholds: Record<string, number>; // More specific type
   private resourceConfigs: Record<ResourceType, ResourceConfig>;
 
   /**
@@ -526,7 +526,11 @@ export class WorldGenerator {
 
         // Return the color for that resource
         if (dominantResource !== null) {
-          const resourceColor = this.resourceConfigs[dominantResource].color;
+          // Use type assertion since we know this is a valid resource type
+          const resourceConfig = this.resourceConfigs[
+            dominantResource as keyof typeof this.resourceConfigs
+          ] as ResourceConfig;
+          const resourceColor = resourceConfig.color;
 
           // Adjust brightness based on density
           const densityFactor = highestDensity * 1.5; // Amplify the effect

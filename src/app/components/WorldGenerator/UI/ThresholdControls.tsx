@@ -1,35 +1,14 @@
 /**
  * ThresholdControls.tsx
  *
- * Component for adjusting threshold values and exporting configuration.
+ * Component for adjusting threshold values for biome generation.
  */
 
 import React, { useState } from "react";
-import {
-  MOISTURE_THRESHOLDS,
-  TEMPERATURE_THRESHOLDS,
-  TemperatureParams,
-  RadialGradientParams,
-  createConfigObject,
-  exportConfigAsFile,
-} from "../config";
+import { MOISTURE_THRESHOLDS, TEMPERATURE_THRESHOLDS } from "../config";
 import Slider from "./Slider";
 
 interface ThresholdControlsProps {
-  // Current configuration values for export
-  seed: number;
-  tileSize: number;
-  noiseDetail: number;
-  noiseFalloff: number;
-  elevationOctaves: number;
-  moistureOctaves: number;
-  elevationScale: number;
-  moistureScale: number;
-  elevationPersistence: number;
-  moisturePersistence: number;
-  temperatureParams: TemperatureParams;
-  radialGradientParams: RadialGradientParams;
-
   // Moisture threshold controls
   moistureThresholds: typeof MOISTURE_THRESHOLDS;
   setMoistureThresholds: (thresholds: typeof MOISTURE_THRESHOLDS) => void;
@@ -66,28 +45,6 @@ const ThresholdControls: React.FC<ThresholdControlsProps> = (props) => {
     const updated = { ...temperatureThresholds, [key]: value };
     setTemperatureThresholds(updated);
     props.setTemperatureThresholds(updated);
-  };
-
-  // Handle export button click
-  const handleExport = () => {
-    const config = createConfigObject({
-      seed: props.seed,
-      tileSize: props.tileSize,
-      noiseDetail: props.noiseDetail,
-      noiseFalloff: props.noiseFalloff,
-      elevationOctaves: props.elevationOctaves,
-      moistureOctaves: props.moistureOctaves,
-      elevationScale: props.elevationScale,
-      moistureScale: props.moistureScale,
-      elevationPersistence: props.elevationPersistence,
-      moisturePersistence: props.moisturePersistence,
-      temperatureParams: props.temperatureParams,
-      radialGradientParams: props.radialGradientParams,
-      moistureThresholds,
-      temperatureThresholds,
-    });
-
-    exportConfigAsFile(config);
   };
 
   return (
@@ -204,7 +161,7 @@ const ThresholdControls: React.FC<ThresholdControlsProps> = (props) => {
           label="Hot"
           value={temperatureThresholds.HOT}
           onChange={(value) => updateTemperatureThreshold("HOT", value)}
-          min={0.75}
+          min={0.7}
           max={0.95}
           step={0.01}
           leftLabel={`${temperatureThresholds.HOT.toFixed(2)}`}
@@ -212,28 +169,13 @@ const ThresholdControls: React.FC<ThresholdControlsProps> = (props) => {
         />
       </div>
 
-      {/* Export button */}
-      <div className="col-span-1 md:col-span-2 mt-4 flex justify-center">
-        <button
-          onClick={handleExport}
-          className="bg-blue-600 hover:bg-blue-700 text-white py-2 px-6 rounded-lg transition-colors duration-200 flex items-center gap-2"
-        >
-          <svg
-            className="w-5 h-5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth="2"
-              d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
-            ></path>
-          </svg>
-          Export Configuration
-        </button>
+      <div className="col-span-1 md:col-span-2 bg-gray-600 p-3 rounded-md">
+        <p className="text-sm">
+          These thresholds control the boundaries between different biome types.
+          Adjusting moisture thresholds determines where deserts, grasslands,
+          and forests appear. Temperature thresholds control the distribution of
+          tundra, taiga, temperate, and tropical biomes.
+        </p>
       </div>
     </div>
   );
