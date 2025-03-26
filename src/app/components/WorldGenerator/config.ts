@@ -227,6 +227,175 @@ export const BIOME_NAMES = {
   [BiomeType.SNOW]: "Snow",
 };
 
+// Debug settings
+export const DEBUG_MODE = true; // Enable or disable debug information
+
+// Resource types
+export enum ResourceType {
+  IRON = "iron",
+  COPPER = "copper",
+  COAL = "coal",
+  GOLD = "gold",
+  SILVER = "silver",
+  OIL = "oil",
+  GAS = "gas",
+  DIAMOND = "diamond",
+}
+
+// Resource configuration
+export interface ResourceConfig {
+  name: string;
+  color: RGB;
+  baseDensity: number;
+  noiseScale: number;
+  noiseOctaves: number;
+  noisePersistence: number;
+  elevationRange: [number, number]; // [min, max]
+  moistureRange: [number, number]; // [min, max]
+  temperatureRange: [number, number]; // [min, max]
+  biomeTypes?: BiomeType[]; // Biomes where this resource can appear
+}
+
+// Default resource configurations
+export const DEFAULT_RESOURCE_CONFIGS: Record<ResourceType, ResourceConfig> = {
+  [ResourceType.IRON]: {
+    name: "Iron",
+    color: { r: 120, g: 120, b: 120 },
+    baseDensity: 0.15,
+    noiseScale: 150,
+    noiseOctaves: 3,
+    noisePersistence: 0.5,
+    elevationRange: [0.3, 0.8],
+    moistureRange: [0.0, 0.7],
+    temperatureRange: [0.1, 0.9],
+    biomeTypes: [
+      BiomeType.BARE,
+      BiomeType.SCORCHED,
+      BiomeType.TAIGA,
+      BiomeType.TEMPERATE_DECIDUOUS_FOREST,
+      BiomeType.TEMPERATE_DESERT,
+      BiomeType.TEMPERATE_GRASSLAND,
+      BiomeType.SHRUBLAND,
+    ],
+  },
+  [ResourceType.COPPER]: {
+    name: "Copper",
+    color: { r: 184, g: 115, b: 51 },
+    baseDensity: 0.12,
+    noiseScale: 180,
+    noiseOctaves: 2,
+    noisePersistence: 0.45,
+    elevationRange: [0.35, 0.8],
+    moistureRange: [0.2, 0.8],
+    temperatureRange: [0.2, 0.9],
+    biomeTypes: [
+      BiomeType.BARE,
+      BiomeType.SCORCHED,
+      BiomeType.TAIGA,
+      BiomeType.SHRUBLAND,
+      BiomeType.TEMPERATE_DECIDUOUS_FOREST,
+    ],
+  },
+  [ResourceType.COAL]: {
+    name: "Coal",
+    color: { r: 40, g: 40, b: 40 },
+    baseDensity: 0.2,
+    noiseScale: 120,
+    noiseOctaves: 3,
+    noisePersistence: 0.5,
+    elevationRange: [0.3, 0.7],
+    moistureRange: [0.3, 0.9],
+    temperatureRange: [0.3, 0.8],
+    biomeTypes: [
+      BiomeType.TAIGA,
+      BiomeType.TEMPERATE_DECIDUOUS_FOREST,
+      BiomeType.TEMPERATE_GRASSLAND,
+      BiomeType.SHRUBLAND,
+    ],
+  },
+  [ResourceType.GOLD]: {
+    name: "Gold",
+    color: { r: 255, g: 215, b: 0 },
+    baseDensity: 0.07,
+    noiseScale: 220,
+    noiseOctaves: 3,
+    noisePersistence: 0.4,
+    elevationRange: [0.4, 0.9],
+    moistureRange: [0.0, 0.5],
+    temperatureRange: [0.4, 0.9],
+    biomeTypes: [
+      BiomeType.SUBTROPICAL_DESERT,
+      BiomeType.TEMPERATE_DESERT,
+      BiomeType.SCORCHED,
+      BiomeType.SHRUBLAND,
+    ],
+  },
+  [ResourceType.SILVER]: {
+    name: "Silver",
+    color: { r: 192, g: 192, b: 192 },
+    baseDensity: 0.08,
+    noiseScale: 200,
+    noiseOctaves: 3,
+    noisePersistence: 0.4,
+    elevationRange: [0.4, 0.85],
+    moistureRange: [0.0, 0.4],
+    temperatureRange: [0.2, 0.7],
+    biomeTypes: [
+      BiomeType.TEMPERATE_DESERT,
+      BiomeType.BARE,
+      BiomeType.SCORCHED,
+    ],
+  },
+  [ResourceType.OIL]: {
+    name: "Oil",
+    color: { r: 50, g: 50, b: 50 },
+    baseDensity: 0.13,
+    noiseScale: 250,
+    noiseOctaves: 2,
+    noisePersistence: 0.6,
+    elevationRange: [0.1, 0.4],
+    moistureRange: [0.2, 0.8],
+    temperatureRange: [0.4, 0.9],
+    biomeTypes: [
+      BiomeType.SUBTROPICAL_DESERT,
+      BiomeType.TEMPERATE_DESERT,
+      BiomeType.GRASSLAND,
+      BiomeType.TEMPERATE_GRASSLAND,
+      BiomeType.OCEAN_SHALLOW,
+    ],
+  },
+  [ResourceType.GAS]: {
+    name: "Natural Gas",
+    color: { r: 220, g: 220, b: 255 },
+    baseDensity: 0.1,
+    noiseScale: 280,
+    noiseOctaves: 2,
+    noisePersistence: 0.55,
+    elevationRange: [0.1, 0.5],
+    moistureRange: [0.4, 0.9],
+    temperatureRange: [0.3, 0.7],
+    biomeTypes: [
+      BiomeType.GRASSLAND,
+      BiomeType.TEMPERATE_GRASSLAND,
+      BiomeType.SHRUBLAND,
+      BiomeType.OCEAN_SHALLOW,
+      BiomeType.OCEAN_MEDIUM,
+    ],
+  },
+  [ResourceType.DIAMOND]: {
+    name: "Diamond",
+    color: { r: 185, g: 242, b: 255 },
+    baseDensity: 0.03,
+    noiseScale: 350,
+    noiseOctaves: 4,
+    noisePersistence: 0.3,
+    elevationRange: [0.6, 0.9],
+    moistureRange: [0.0, 0.3],
+    temperatureRange: [0.2, 0.6],
+    biomeTypes: [BiomeType.SCORCHED, BiomeType.BARE],
+  },
+};
+
 // Visualization modes for the map
 export enum VisualizationMode {
   BIOME = "biome", // Normal colored biome view
@@ -234,6 +403,7 @@ export enum VisualizationMode {
   ELEVATION = "elevation", // Elevation using a height gradient
   MOISTURE = "moisture", // Moisture using a blue gradient
   TEMPERATURE = "temperature", // Temperature using a temperature gradient
+  RESOURCES = "resources", // Resource distribution visualization
 }
 
 // Tile grid constants
@@ -246,10 +416,11 @@ export const GRID_HEIGHT =
 export const GRID_VISIBLE_THRESHOLD = 0.6; // Show grid lines when zoom > 60%
 export const COORDS_VISIBLE_THRESHOLD = 2.0; // Show tile coordinates when zoom > 200%
 
-// Debug settings
-export const DEBUG_MODE = true; // Enable or disable debug information
-export const SHOW_GRID = true; // Show grid lines in debug mode
-export const SHOW_COORDS = true; // Show coordinates in debug mode
+// Show grid lines in debug mode
+export const SHOW_GRID = true;
+
+// Show coordinates in debug mode
+export const SHOW_COORDS = true;
 
 // Function to collect all configuration parameters for exporting
 export interface ExportedConfig {
@@ -276,6 +447,9 @@ export interface ExportedConfig {
   // Thresholds
   moistureThresholds: typeof MOISTURE_THRESHOLDS;
   temperatureThresholds: typeof TEMPERATURE_THRESHOLDS;
+
+  // Resource settings
+  resourceConfigs?: Record<ResourceType, ResourceConfig>;
 }
 
 /**
@@ -315,6 +489,9 @@ export function createConfigObject(
     moistureThresholds: params.moistureThresholds || MOISTURE_THRESHOLDS,
     temperatureThresholds:
       params.temperatureThresholds || TEMPERATURE_THRESHOLDS,
+
+    // Resource settings
+    resourceConfigs: params.resourceConfigs || DEFAULT_RESOURCE_CONFIGS,
   };
 }
 

@@ -12,11 +12,15 @@ import {
   DEFAULT_RADIAL_PARAMS,
   TemperatureParams,
   RadialGradientParams,
+  ResourceType,
+  ResourceConfig,
+  DEFAULT_RESOURCE_CONFIGS,
 } from "./config";
 import {
   OctaveNoise,
   createElevationNoise,
   createMoistureNoise,
+  OctaveNoiseParams,
 } from "./octaveNoise";
 import {
   getBiomeColor,
@@ -29,6 +33,15 @@ import { getTemperatureColor, TemperatureMapper } from "./temperatureMapper";
 import { applyRadialGradient } from "./radialUtils";
 
 /**
+ * Resource data for each tile
+ */
+export interface ResourceData {
+  type: ResourceType;
+  density: number; // 0-1 value representing concentration
+  depositSize: number; // Size of the deposit (1-10)
+}
+
+/**
  * Interface for tile data in the world
  */
 export interface WorldTile {
@@ -39,6 +52,7 @@ export interface WorldTile {
   temperature: number;
   biomeType: BiomeType;
   color: RGB;
+  resources: Partial<Record<ResourceType, ResourceData>>; // Resources present in this tile
 }
 
 /**
@@ -55,7 +69,8 @@ export interface WorldGeneratorConfig {
   temperatureParams: TemperatureParams;
   radialGradientParams: RadialGradientParams;
   moistureThresholds?: any; // Using 'any' temporarily, ideally should be properly typed
-  temperatureThresholds?: any; // Using 'any' temporarily, ideally should be properly typed
+  temperatureThresholds?: any; // Using 'any' temporarily
+  resourceConfigs?: Record<ResourceType, ResourceConfig>; // Configuration for resource generation
 }
 
 /**
@@ -64,10 +79,12 @@ export interface WorldGeneratorConfig {
 export class WorldGenerator {
   private elevationNoise: OctaveNoise;
   private moistureNoise: OctaveNoise;
+  private resourceNoise: Record<ResourceType, OctaveNoise>; // Noise generators for each resource
   private config: WorldGeneratorConfig;
   private temperatureMapper: TemperatureMapper;
   private moistureThresholds: any; // Using 'any' temporarily
   private temperatureThresholds: any; // Using 'any' temporarily
+  private resourceConfigs: Record<ResourceType, ResourceConfig>;
 
   /**
    * Create a new world generator with the specified configuration
@@ -77,11 +94,14 @@ export class WorldGenerator {
       ...config,
       radialGradientParams:
         config.radialGradientParams || DEFAULT_RADIAL_PARAMS,
+      resourceConfigs: config.resourceConfigs || DEFAULT_RESOURCE_CONFIGS,
     };
 
     // Store thresholds
     this.moistureThresholds = config.moistureThresholds || {};
     this.temperatureThresholds = config.temperatureThresholds || {};
+    this.resourceConfigs =
+      this.config.resourceConfigs || DEFAULT_RESOURCE_CONFIGS;
 
     // Create noise generators for elevation and moisture
     this.elevationNoise = createElevationNoise(
@@ -92,6 +112,9 @@ export class WorldGenerator {
       config.seed,
       config.moistureOctaves
     );
+
+    // Initialize resource noise generators
+    this.resourceNoise = this.initializeResourceNoise(config.seed);
 
     // Update noise generator settings
     this.elevationNoise.updateParams({
@@ -106,6 +129,37 @@ export class WorldGenerator {
 
     // Initialize temperature mapper with precomputed heat gradient
     this.temperatureMapper = new TemperatureMapper(config.temperatureParams);
+  }
+
+  /**
+   * Initialize noise generators for each resource type
+   */
+  private initializeResourceNoise(
+    seed: number
+  ): Record<ResourceType, OctaveNoise> {
+    const resourceNoise: Record<ResourceType, OctaveNoise> = {} as Record<
+      ResourceType,
+      OctaveNoise
+    >;
+
+    // Create a noise generator for each resource type with different seed offsets
+    Object.entries(this.resourceConfigs).forEach(
+      ([resourceType, config], index) => {
+        const resourceSeed = seed + 3000 + index * 100; // Ensure unique seeds for each resource
+        const octaveCount = config.noiseOctaves || 3;
+
+        const noise = new OctaveNoise({
+          seed: resourceSeed,
+          octaveCount,
+          scale: config.noiseScale || 200,
+          persistence: config.noisePersistence || 0.5,
+        });
+
+        resourceNoise[resourceType as ResourceType] = noise;
+      }
+    );
+
+    return resourceNoise;
   }
 
   /**
@@ -125,6 +179,9 @@ export class WorldGenerator {
     if (newConfig.temperatureThresholds) {
       this.temperatureThresholds = newConfig.temperatureThresholds;
     }
+    if (newConfig.resourceConfigs) {
+      this.resourceConfigs = newConfig.resourceConfigs;
+    }
 
     // If seed changed, recreate the noise generators
     if (newConfig.seed !== undefined) {
@@ -136,6 +193,9 @@ export class WorldGenerator {
         this.config.seed,
         this.config.moistureOctaves
       );
+
+      // Recreate resource noise generators
+      this.resourceNoise = this.initializeResourceNoise(this.config.seed);
 
       // Apply existing scale and persistence settings
       this.elevationNoise.updateParams({
@@ -204,6 +264,46 @@ export class WorldGenerator {
         ...newConfig.temperatureParams,
       });
     }
+
+    // Update resource configurations if provided
+    if (newConfig.resourceConfigs) {
+      // Recreate any modified resource noise generators
+      Object.entries(newConfig.resourceConfigs).forEach(
+        ([resourceType, config]) => {
+          const resourceTypeEnum = resourceType as ResourceType;
+          if (
+            config.noiseScale !==
+              this.resourceConfigs[resourceTypeEnum]?.noiseScale ||
+            config.noiseOctaves !==
+              this.resourceConfigs[resourceTypeEnum]?.noiseOctaves ||
+            config.noisePersistence !==
+              this.resourceConfigs[resourceTypeEnum]?.noisePersistence
+          ) {
+            this.resourceNoise[resourceTypeEnum].updateParams({
+              scale: config.noiseScale,
+              persistence: config.noisePersistence,
+            });
+
+            // If octaves changed, need to recreate the noise generator
+            if (
+              config.noiseOctaves !==
+              this.resourceConfigs[resourceTypeEnum]?.noiseOctaves
+            ) {
+              const resourceSeed =
+                this.config.seed +
+                3000 +
+                Object.keys(ResourceType).indexOf(resourceType) * 100;
+              this.resourceNoise[resourceTypeEnum] = new OctaveNoise({
+                seed: resourceSeed,
+                octaveCount: config.noiseOctaves,
+                scale: config.noiseScale,
+                persistence: config.noisePersistence,
+              });
+            }
+          }
+        }
+      );
+    }
   }
 
   /**
@@ -245,106 +345,235 @@ export class WorldGenerator {
   }
 
   /**
+   * Get resources for a specific location
+   */
+  getResources(
+    x: number,
+    y: number,
+    biomeType: BiomeType,
+    elevation: number,
+    moisture: number,
+    temperature: number
+  ): Partial<Record<ResourceType, ResourceData>> {
+    const resources: Partial<Record<ResourceType, ResourceData>> = {};
+
+    if (biomeType === BiomeType.OCEAN_DEEP) {
+      return resources; // No resources in deep ocean
+    }
+
+    // Check each resource type
+    Object.entries(this.resourceConfigs).forEach(([resourceType, config]) => {
+      const type = resourceType as ResourceType;
+
+      // Check if the biome is compatible with this resource
+      const isValidBiome =
+        !config.biomeTypes || config.biomeTypes.includes(biomeType);
+
+      // Check if elevation is in range
+      const [minElevation, maxElevation] = config.elevationRange;
+      const isValidElevation =
+        elevation >= minElevation && elevation <= maxElevation;
+
+      // Check if moisture is in range
+      const [minMoisture, maxMoisture] = config.moistureRange;
+      const isValidMoisture =
+        moisture >= minMoisture && moisture <= maxMoisture;
+
+      // Check if temperature is in range
+      const [minTemp, maxTemp] = config.temperatureRange;
+      const isValidTemperature =
+        temperature >= minTemp && temperature <= maxTemp;
+
+      if (
+        isValidBiome &&
+        isValidElevation &&
+        isValidMoisture &&
+        isValidTemperature
+      ) {
+        // Get the resource noise value at this location
+        const noiseValue = this.resourceNoise[type].get(x, y);
+
+        // Calculate resource density using the noise value
+        const density = Math.pow(noiseValue, 1.3); // Non-linear scaling for more clustered resources
+
+        // Only add the resource if its density exceeds the base threshold
+        if (density > config.baseDensity) {
+          // Generate deposit size using a different noise scale
+          const depositSizeValue = this.resourceNoise[type].get(
+            x * 0.1,
+            y * 0.1
+          );
+          const depositSize = Math.floor(depositSizeValue * 10) + 1; // 1-10 range
+
+          resources[type] = {
+            type,
+            density,
+            depositSize,
+          };
+        }
+      }
+    });
+
+    return resources;
+  }
+
+  /**
    * Get comprehensive biome data for a specific location
    */
   getBiomeData(x: number, y: number): BiomeData {
-    // Get raw elevation and moisture values
     const elevation = this.getElevation(x, y);
     const moisture = this.getMoisture(x, y);
     const temperature = this.getTemperature(x, y, elevation);
 
-    // Return comprehensive data object
     return {
       elevation,
       moisture,
       temperature,
       x,
       y,
-      // Add threshold data for biome determination
       moistureThresholds: this.moistureThresholds,
       temperatureThresholds: this.temperatureThresholds,
     };
   }
 
   /**
-   * Get biome type at the specified world coordinates
+   * Get the biome type at the specified world coordinates
    */
   getBiome(x: number, y: number): BiomeType {
-    const biomeData = this.getBiomeData(x, y);
-    return getBiomeType(biomeData);
+    const data = this.getBiomeData(x, y);
+    return getBiomeType(data);
   }
 
   /**
-   * Get full tile data for a specific location
+   * Get complete tile data for the specified world coordinates
    */
   getTile(x: number, y: number): WorldTile {
-    // Get all biome data
+    const elevation = this.getElevation(x, y);
+    const moisture = this.getMoisture(x, y);
+    const temperature = this.getTemperature(x, y, elevation);
     const biomeData = this.getBiomeData(x, y);
-
-    // Determine biome based on data
     const biomeType = getBiomeType(biomeData);
+    const resources = this.getResources(
+      x,
+      y,
+      biomeType,
+      elevation,
+      moisture,
+      temperature
+    );
 
-    // Get appropriate color for this biome
+    // Use the biome map to determine the base color
     const color = getBiomeColor(biomeType);
 
     return {
       x,
       y,
-      elevation: biomeData.elevation,
-      moisture: biomeData.moisture,
-      temperature: biomeData.temperature,
+      elevation,
+      moisture,
+      temperature,
       biomeType,
       color,
+      resources,
     };
   }
 
   /**
-   * Get a color for the specified location based on visualization mode
+   * Get the color for a tile based on the visualization mode
    */
   getColorForMode(x: number, y: number, mode: VisualizationMode): RGB {
-    // Get biome data
-    const biomeData = this.getBiomeData(x, y);
-
-    // Return appropriate color based on visualization mode
     switch (mode) {
-      case VisualizationMode.NOISE:
-        // Return grayscale based on elevation
-        const value = Math.floor(biomeData.elevation * 255);
-        return { r: value, g: value, b: value };
-
       case VisualizationMode.ELEVATION:
-        // Return elevation-based color gradient
-        return getElevationColor(biomeData.elevation);
+        const elevation = this.getElevation(x, y);
+        return getElevationColor(elevation);
 
       case VisualizationMode.MOISTURE:
-        // Return moisture-based color gradient
-        return getMoistureColor(biomeData.moisture);
+        const moisture = this.getMoisture(x, y);
+        return getMoistureColor(moisture);
 
       case VisualizationMode.TEMPERATURE:
-        // Return temperature-based color gradient
-        return getTemperatureColor(biomeData.temperature);
+        const elevationForTemp = this.getElevation(x, y);
+        const temperature = this.getTemperature(x, y, elevationForTemp);
+        return getTemperatureColor(temperature);
+
+      case VisualizationMode.NOISE:
+        // Just use elevation noise for testing
+        const noiseValue = this.elevationNoise.get(x, y);
+        const noiseColor = Math.floor(noiseValue * 255);
+        return { r: noiseColor, g: noiseColor, b: noiseColor };
+
+      case VisualizationMode.RESOURCES:
+        // Show resources as colored overlays
+        const tile = this.getTile(x, y);
+        // If no resources, show biome color at reduced intensity
+        if (Object.keys(tile.resources).length === 0) {
+          return {
+            r: Math.floor(tile.color.r * 0.5),
+            g: Math.floor(tile.color.g * 0.5),
+            b: Math.floor(tile.color.b * 0.5),
+          };
+        }
+
+        // Find the most dominant resource (highest density)
+        let dominantResource: ResourceType | null = null;
+        let highestDensity = 0;
+
+        Object.entries(tile.resources).forEach(([resourceType, data]) => {
+          if (data && data.density > highestDensity) {
+            dominantResource = resourceType as ResourceType;
+            highestDensity = data.density;
+          }
+        });
+
+        // Return the color for that resource
+        if (dominantResource !== null) {
+          const resourceColor = this.resourceConfigs[dominantResource].color;
+
+          // Adjust brightness based on density
+          const densityFactor = highestDensity * 1.5; // Amplify the effect
+          const intensity = Math.min(1.0, 0.5 + densityFactor);
+
+          return {
+            r: Math.floor(resourceColor.r * intensity),
+            g: Math.floor(resourceColor.g * intensity),
+            b: Math.floor(resourceColor.b * intensity),
+          };
+        }
+
+        // Fallback to biome color
+        return tile.color;
 
       case VisualizationMode.BIOME:
       default:
-        // Return biome color (default mode)
-        const biomeType = getBiomeType(biomeData);
+        const biomeType = this.getBiome(x, y);
         return getBiomeColor(biomeType);
     }
   }
 
   /**
-   * Generate debug information for a specific location
+   * Get debug information for a specific tile
    */
   getDebugInfo(x: number, y: number): string {
-    const biomeData = this.getBiomeData(x, y);
-    const biomeType = getBiomeType(biomeData);
+    const tile = this.getTile(x, y);
+    const biomeTypeName = BiomeType[tile.biomeType];
 
-    return (
-      `Tile(${x},${y}) - ` +
-      `Elev: ${biomeData.elevation.toFixed(3)} - ` +
-      `Moist: ${biomeData.moisture.toFixed(3)} - ` +
-      `Temp: ${biomeData.temperature.toFixed(3)} - ` +
-      `Biome: ${BiomeType[biomeType]}`
-    );
+    // Build a list of resources present
+    const resourceList = Object.entries(tile.resources)
+      .map(([type, data]) => {
+        if (data) {
+          return `${this.resourceConfigs[type as ResourceType].name} (${(
+            data.density * 100
+          ).toFixed(1)}%)`;
+        }
+        return "";
+      })
+      .filter((item) => item !== "")
+      .join(", ");
+
+    return `Pos: (${x}, ${y})
+Elevation: ${tile.elevation.toFixed(2)}
+Moisture: ${tile.moisture.toFixed(2)}
+Temperature: ${tile.temperature.toFixed(2)}
+Biome: ${biomeTypeName}
+${resourceList ? `Resources: ${resourceList}` : ""}`;
   }
 }

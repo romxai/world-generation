@@ -24,6 +24,9 @@ import {
   DEFAULT_TEMPERATURE_BAND_SCALE,
   DEFAULT_TEMPERATURE_PARAMS,
   DEFAULT_RADIAL_PARAMS,
+  ResourceType,
+  ResourceConfig,
+  DEFAULT_RESOURCE_CONFIGS,
 } from "./components/WorldGenerator/config";
 import GenerationControls from "./components/WorldGenerator/UI/GenerationControls";
 
@@ -104,6 +107,11 @@ export default function Home() {
     DEFAULT_RADIAL_PARAMS.strength || 0.7
   );
 
+  // Resource settings
+  const [resourceConfigs, setResourceConfigs] = useState<
+    Record<ResourceType, ResourceConfig>
+  >(DEFAULT_RESOURCE_CONFIGS);
+
   // Controls UI state
   const [showControls, setShowControls] = useState(true);
 
@@ -140,6 +148,7 @@ export default function Home() {
       falloffExponent: radialFalloffExponent,
       strength: radialStrength,
     },
+    resourceConfigs: resourceConfigs,
   });
 
   // Update visualization mode immediately
@@ -194,6 +203,7 @@ export default function Home() {
         falloffExponent: radialFalloffExponent,
         strength: radialStrength,
       },
+      resourceConfigs: resourceConfigs,
     });
   };
 
@@ -254,7 +264,6 @@ export default function Home() {
               setElevationTempEffect={setElevationTempEffect}
               temperatureBandScale={temperatureBandScale}
               setTemperatureBandScale={setTemperatureBandScale}
-              // Add the new temperature controls
               temperatureNoiseScale={temperatureNoiseScale}
               setTemperatureNoiseScale={setTemperatureNoiseScale}
               temperatureNoiseOctaves={temperatureNoiseOctaves}
@@ -276,31 +285,25 @@ export default function Home() {
               setRadialFalloffExponent={setRadialFalloffExponent}
               radialStrength={radialStrength}
               setRadialStrength={setRadialStrength}
+              // Resource properties
+              resourceConfigs={resourceConfigs}
+              setResourceConfigs={setResourceConfigs}
               // Actions
               generateNewSeed={generateNewSeed}
             />
+            <div className="mt-4">
+              <button
+                onClick={() => handleGenerateWorld()}
+                className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded transition w-full"
+              >
+                Apply Settings
+              </button>
+            </div>
           </div>
         )}
 
-        <div className="flex-1 flex items-center justify-center bg-black relative">
-          <WorldMap
-            width={WINDOW_WIDTH}
-            height={WINDOW_HEIGHT}
-            tileSize={currentGenParams.tileSize}
-            seed={currentGenParams.seed}
-            debug={currentGenParams.debug}
-            noiseDetail={currentGenParams.noiseDetail}
-            noiseFalloff={currentGenParams.noiseFalloff}
-            visualizationMode={currentGenParams.visualizationMode}
-            elevationOctaves={currentGenParams.elevationOctaves}
-            moistureOctaves={currentGenParams.moistureOctaves}
-            elevationScale={currentGenParams.elevationScale}
-            moistureScale={currentGenParams.moistureScale}
-            elevationPersistence={currentGenParams.elevationPersistence}
-            moisturePersistence={currentGenParams.moisturePersistence}
-            temperatureParams={currentGenParams.temperatureParams}
-            radialGradientParams={currentGenParams.radialGradientParams}
-          />
+        <div className="flex-1 p-0 overflow-hidden">
+          <WorldMap {...currentGenParams} />
         </div>
       </div>
     </main>

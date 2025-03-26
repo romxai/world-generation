@@ -10,12 +10,16 @@ import {
   MOISTURE_THRESHOLDS,
   TEMPERATURE_THRESHOLDS,
   VisualizationMode,
+  ResourceType,
+  ResourceConfig,
+  DEFAULT_RESOURCE_CONFIGS,
 } from "../config";
 import NoiseControls from "./NoiseControls";
 import ClimateControls from "./ClimateControls";
 import RadialGradientControls from "./RadialGradientControls";
 import GeneralControls from "./GeneralControls";
 import ThresholdControls from "./ThresholdControls";
+import ResourceControls from "./ResourceControls";
 
 interface GenerationControlsProps {
   // Basic properties
@@ -75,6 +79,10 @@ interface GenerationControlsProps {
   radialStrength: number;
   setRadialStrength: (value: number) => void;
 
+  // Resource properties
+  resourceConfigs?: Record<ResourceType, ResourceConfig>;
+  setResourceConfigs?: (configs: Record<ResourceType, ResourceConfig>) => void;
+
   // Actions
   generateNewSeed: () => void;
 
@@ -94,6 +102,24 @@ const GenerationControls: React.FC<GenerationControlsProps> = (props) => {
   // Toggle a section
   const toggleSection = (section: string) => {
     setActiveSection(activeSection === section ? "" : section);
+  };
+
+  // Handle resource config updates
+  const updateResourceConfig = (
+    resourceType: ResourceType,
+    field: keyof ResourceConfig,
+    value: any
+  ) => {
+    if (props.resourceConfigs && props.setResourceConfigs) {
+      const updatedConfigs = {
+        ...props.resourceConfigs,
+        [resourceType]: {
+          ...props.resourceConfigs[resourceType],
+          [field]: value,
+        },
+      };
+      props.setResourceConfigs(updatedConfigs);
+    }
   };
 
   return (
@@ -211,93 +237,84 @@ const GenerationControls: React.FC<GenerationControlsProps> = (props) => {
           )}
         </div>
 
-        {/* Ocean Radial Effect Section */}
+        {/* Resource Controls Section */}
+        <div className="border border-gray-700 rounded-lg overflow-hidden">
+          <button
+            onClick={() => toggleSection("resources")}
+            className="w-full flex justify-between items-center p-3 bg-gray-700 hover:bg-gray-600 transition text-left"
+          >
+            <span className="font-medium">Resource Generation Settings</span>
+            <span>{activeSection === "resources" ? "▼" : "►"}</span>
+          </button>
+
+          {activeSection === "resources" && (
+            <div className="p-3">
+              <ResourceControls
+                resourceConfigs={
+                  props.resourceConfigs || DEFAULT_RESOURCE_CONFIGS
+                }
+                updateResourceConfig={updateResourceConfig}
+              />
+            </div>
+          )}
+        </div>
+
+        {/* Radial Gradient Controls Section */}
         <div className="border border-gray-700 rounded-lg overflow-hidden">
           <button
             onClick={() => toggleSection("radial")}
             className="w-full flex justify-between items-center p-3 bg-gray-700 hover:bg-gray-600 transition text-left"
           >
-            <span className="font-medium">Ocean Radial Effect</span>
+            <span className="font-medium">Continental Shape Settings</span>
             <span>{activeSection === "radial" ? "▼" : "►"}</span>
           </button>
 
           {activeSection === "radial" && (
             <div className="p-3">
               <RadialGradientControls
-                radialCenterX={props.radialCenterX}
-                setRadialCenterX={props.setRadialCenterX}
-                radialCenterY={props.radialCenterY}
-                setRadialCenterY={props.setRadialCenterY}
-                radialRadius={props.radialRadius}
-                setRadialRadius={props.setRadialRadius}
-                radialFalloffExponent={props.radialFalloffExponent}
-                setRadialFalloffExponent={props.setRadialFalloffExponent}
-                radialStrength={props.radialStrength}
-                setRadialStrength={props.setRadialStrength}
+                centerX={props.radialCenterX}
+                setCenterX={props.setRadialCenterX}
+                centerY={props.radialCenterY}
+                setCenterY={props.setRadialCenterY}
+                radius={props.radialRadius}
+                setRadius={props.setRadialRadius}
+                falloffExponent={props.radialFalloffExponent}
+                setFalloffExponent={props.setRadialFalloffExponent}
+                strength={props.radialStrength}
+                setStrength={props.setRadialStrength}
               />
             </div>
           )}
         </div>
 
-        {/* Thresholds & Export Section */}
-        <div className="border border-gray-700 rounded-lg overflow-hidden">
-          <button
-            onClick={() => toggleSection("thresholds")}
-            className="w-full flex justify-between items-center p-3 bg-gray-700 hover:bg-gray-600 transition text-left"
-          >
-            <span className="font-medium">
-              Thresholds & Export Configuration
-            </span>
-            <span>{activeSection === "thresholds" ? "▼" : "►"}</span>
-          </button>
+        {/* Threshold Controls Section (if enabled) */}
+        {props.moistureThresholds && props.setMoistureThresholds && (
+          <div className="border border-gray-700 rounded-lg overflow-hidden">
+            <button
+              onClick={() => toggleSection("thresholds")}
+              className="w-full flex justify-between items-center p-3 bg-gray-700 hover:bg-gray-600 transition text-left"
+            >
+              <span className="font-medium">Advanced Biome Thresholds</span>
+              <span>{activeSection === "thresholds" ? "▼" : "►"}</span>
+            </button>
 
-          {activeSection === "thresholds" && (
-            <div className="p-3">
-              <ThresholdControls
-                seed={props.seed}
-                tileSize={16} // Default tile size
-                noiseDetail={props.noiseDetail}
-                noiseFalloff={props.noiseFalloff}
-                elevationOctaves={props.elevationOctaves}
-                moistureOctaves={props.moistureOctaves}
-                elevationScale={props.elevationScale}
-                moistureScale={props.moistureScale}
-                elevationPersistence={props.elevationPersistence}
-                moisturePersistence={props.moisturePersistence}
-                temperatureParams={{
-                  equatorPosition: props.equatorPosition,
-                  temperatureVariance: props.temperatureVariance,
-                  elevationEffect: props.elevationTempEffect,
-                  bandScale: props.temperatureBandScale,
-                  noiseScale: props.temperatureNoiseScale,
-                  noiseOctaves: props.temperatureNoiseOctaves,
-                  noisePersistence: props.temperatureNoisePersistence,
-                  polarTemperature: props.polarTemperature,
-                  equatorTemperature: props.equatorTemperature,
-                }}
-                radialGradientParams={{
-                  centerX: props.radialCenterX,
-                  centerY: props.radialCenterY,
-                  radius: props.radialRadius,
-                  falloffExponent: props.radialFalloffExponent,
-                  strength: props.radialStrength,
-                }}
-                moistureThresholds={
-                  props.moistureThresholds || MOISTURE_THRESHOLDS
-                }
-                setMoistureThresholds={
-                  props.setMoistureThresholds || (() => {})
-                }
-                temperatureThresholds={
-                  props.temperatureThresholds || TEMPERATURE_THRESHOLDS
-                }
-                setTemperatureThresholds={
-                  props.setTemperatureThresholds || (() => {})
-                }
-              />
-            </div>
-          )}
-        </div>
+            {activeSection === "thresholds" && (
+              <div className="p-3">
+                <ThresholdControls
+                  moistureThresholds={props.moistureThresholds}
+                  setMoistureThresholds={props.setMoistureThresholds}
+                  temperatureThresholds={
+                    props.temperatureThresholds || TEMPERATURE_THRESHOLDS
+                  }
+                  setTemperatureThresholds={
+                    props.setTemperatureThresholds ||
+                    (() => console.log("Temperature thresholds not enabled"))
+                  }
+                />
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
