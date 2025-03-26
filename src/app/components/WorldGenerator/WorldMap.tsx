@@ -1,7 +1,13 @@
 // WorldMap.tsx - Main component for rendering the procedurally generated world map
 "use client";
 
-import React, { useRef, useEffect, useState, useMemo } from "react";
+import React, {
+  useRef,
+  useEffect,
+  useState,
+  useMemo,
+  useCallback,
+} from "react";
 import {
   WINDOW_WIDTH,
   WINDOW_HEIGHT,
@@ -22,17 +28,16 @@ import {
   WORLD_GRID_HEIGHT,
   GRID_VISIBLE_THRESHOLD,
   COORDS_VISIBLE_THRESHOLD,
-  TerrainType,
+  BiomeType,
   BIOME_PRESETS,
   VisualizationMode,
-  calculateTerrainHeights,
+  calculateBiomeHeights,
   LOW_ZOOM_THRESHOLD,
   LOW_ZOOM_TILE_FACTOR,
   DEFAULT_OCTAVES,
   DEFAULT_ELEVATION_SCALE,
   DEFAULT_MOISTURE_SCALE,
   DEFAULT_OCTAVE_WEIGHT,
-  BiomeType,
   BIOME_NAMES,
   DEFAULT_EQUATOR_POSITION,
   DEFAULT_TEMPERATURE_VARIANCE,
@@ -42,10 +47,13 @@ import {
   RGB,
   MOISTURE_THRESHOLDS,
   TEMPERATURE_THRESHOLDS,
+  ContinentalFalloffParams,
+  DEFAULT_CONTINENTAL_PARAMS,
 } from "./config";
 import { PerlinNoise, createNoiseGenerator } from "./noiseGenerator";
 import { WorldGenerator, WorldGeneratorConfig } from "./worldGenerator";
-import { rgbToString } from "./terrainUtils";
+import { rgbToString } from "./biomeMapper";
+import { ResourceType } from "./resourceGenerator";
 
 interface WorldMapProps {
   width?: number;
@@ -86,9 +94,13 @@ interface WorldMapProps {
     falloffExponent: number;
     strength: number;
   };
+  // Continental falloff parameters
+  continentalFalloffParams?: ContinentalFalloffParams;
   // Add threshold parameters
   moistureThresholds?: typeof MOISTURE_THRESHOLDS;
   temperatureThresholds?: typeof TEMPERATURE_THRESHOLDS;
+  resourceDensity?: number;
+  resourceScale?: number;
 }
 
 interface CameraState {
@@ -135,9 +147,13 @@ const WorldMap: React.FC<WorldMapProps> = ({
     falloffExponent: 2.0,
     strength: 0.5,
   },
+  // Continental falloff parameters
+  continentalFalloffParams = DEFAULT_CONTINENTAL_PARAMS,
   // Add threshold parameters with defaults
   moistureThresholds = MOISTURE_THRESHOLDS,
   temperatureThresholds = TEMPERATURE_THRESHOLDS,
+  resourceDensity = 0.25,
+  resourceScale = 150,
 }) => {
   // Canvas and rendering references
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -162,10 +178,14 @@ const WorldMap: React.FC<WorldMapProps> = ({
   const [currentVisualizationMode, setVisualizationMode] =
     useState<string>(visualizationMode);
 
-  // Cache the terrain heights calculated from weights
+  // Cache the biome heights calculated from weights
   // This improves performance by not recalculating on every render
-  const terrainHeights = useMemo(() => {
-    return calculateTerrainHeights(biomeWeights);
+  const biomeHeights = useMemo(() => {
+    // Extract weights array if a preset object was passed, otherwise use the array directly
+    const weights = Array.isArray(biomeWeights)
+      ? biomeWeights
+      : (biomeWeights as any)?.weights || [80, 10, 10, 5, 35, 25, 20];
+    return calculateBiomeHeights(weights);
   }, [biomeWeights]);
 
   // Create world generator with specified parameters
@@ -182,11 +202,20 @@ const WorldMap: React.FC<WorldMapProps> = ({
         equatorPosition: temperatureParams.equatorPosition,
         temperatureVariance: temperatureParams.temperatureVariance,
         elevationEffect: temperatureParams.elevationEffect,
-        polarTemperature: 0.0,
-        equatorTemperature: 1.0,
+        polarTemperature: temperatureParams.polarTemperature || 0.0,
+        equatorTemperature: temperatureParams.equatorTemperature || 1.0,
         bandScale: temperatureParams.bandScale,
+        noiseScale: temperatureParams.noiseScale,
+        noiseOctaves: temperatureParams.noiseOctaves,
+        noisePersistence: temperatureParams.noisePersistence,
+        noiseSeed: temperatureParams.noiseSeed || seed + 2000,
       },
-      radialGradientParams: radialGradientParams,
+      radialGradientParams,
+      continentalFalloffParams,
+      moistureThresholds,
+      temperatureThresholds,
+      resourceDensity,
+      resourceScale,
     })
   );
 
@@ -202,8 +231,11 @@ const WorldMap: React.FC<WorldMapProps> = ({
       moisturePersistence,
       temperatureParams,
       radialGradientParams,
+      continentalFalloffParams,
       moistureThresholds,
       temperatureThresholds,
+      resourceDensity,
+      resourceScale,
     });
     setMapChanged(true);
   }, [
@@ -216,8 +248,11 @@ const WorldMap: React.FC<WorldMapProps> = ({
     moisturePersistence,
     temperatureParams,
     radialGradientParams,
+    continentalFalloffParams,
     moistureThresholds,
     temperatureThresholds,
+    resourceDensity,
+    resourceScale,
   ]);
 
   // Re-render map when visualization mode or biome weights change
@@ -541,8 +576,48 @@ const WorldMap: React.FC<WorldMapProps> = ({
     debug,
     mousePos,
     currentVisualizationMode,
-    terrainHeights,
+    biomeHeights,
   ]);
+
+  // Function to get debug information
+  const handleMouseMoveDebug = useCallback(
+    (e: MouseEvent) => {
+      if (!canvasRef.current) return;
+
+      const rect = canvasRef.current.getBoundingClientRect();
+      const mouseX = e.clientX - rect.left;
+      const mouseY = e.clientY - rect.top;
+
+      // Calculate the effective tile size based on zoom
+      const effectiveTileSize = tileSize * camera.zoom;
+
+      // Convert screen coordinates to world coordinates
+      const worldX = Math.floor(
+        camera.x + (mouseX - width / 2) / effectiveTileSize
+      );
+      const worldY = Math.floor(
+        camera.y + (mouseY - height / 2) / effectiveTileSize
+      );
+
+      // Set mouse position for debug display
+      setMousePos({ x: worldX, y: worldY });
+
+      // Get debug info
+      if (
+        worldX >= 0 &&
+        worldX < WORLD_GRID_WIDTH &&
+        worldY >= 0 &&
+        worldY < WORLD_GRID_HEIGHT
+      ) {
+        const debugText = worldGeneratorRef.current.getDebugInfo(
+          worldX,
+          worldY
+        );
+        setDebugInfo(debugText);
+      }
+    },
+    [camera, tileSize, width, height]
+  );
 
   return (
     <div className="world-map-container" style={{ position: "relative" }}>
@@ -567,9 +642,7 @@ const WorldMap: React.FC<WorldMapProps> = ({
             borderRadius: "3px",
             fontSize: "12px",
             fontFamily: "monospace",
-            maxWidth: "80%",
             whiteSpace: "nowrap",
-            overflow: "hidden",
             textOverflow: "ellipsis",
           }}
         >

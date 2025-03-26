@@ -103,6 +103,37 @@ export const DEFAULT_RADIAL_PARAMS: RadialGradientParams = {
   strength: DEFAULT_RADIAL_STRENGTH,
 };
 
+// Continental falloff parameters
+export interface ContinentalFalloffParams {
+  enabled?: boolean; // Whether continental falloff is enabled
+  sharpness?: number; // How sharp the falloff around continents is (1-10)
+  scale?: number; // Scale of the continental detection (50-500)
+  threshold?: number; // Threshold for detecting continents (0-1)
+  strength?: number; // Strength of the continental falloff effect (0-1)
+  noiseOffset?: number; // Offset for the noise function to create variety
+  oceanDepth?: number; // How deep oceans are between continents (0-1)
+}
+
+// Default continental falloff settings
+export const DEFAULT_CONTINENTAL_ENABLED = true;
+export const DEFAULT_CONTINENTAL_SHARPNESS = 10.0;
+export const DEFAULT_CONTINENTAL_SCALE = 200;
+export const DEFAULT_CONTINENTAL_THRESHOLD = 0.49;
+export const DEFAULT_CONTINENTAL_STRENGTH = 1.0;
+export const DEFAULT_CONTINENTAL_NOISE_OFFSET = 5000;
+export const DEFAULT_CONTINENTAL_OCEAN_DEPTH = 0.6;
+
+// Combined continental falloff parameters
+export const DEFAULT_CONTINENTAL_PARAMS: ContinentalFalloffParams = {
+  enabled: DEFAULT_CONTINENTAL_ENABLED,
+  sharpness: DEFAULT_CONTINENTAL_SHARPNESS,
+  scale: DEFAULT_CONTINENTAL_SCALE,
+  threshold: DEFAULT_CONTINENTAL_THRESHOLD,
+  strength: DEFAULT_CONTINENTAL_STRENGTH,
+  noiseOffset: DEFAULT_CONTINENTAL_NOISE_OFFSET,
+  oceanDepth: DEFAULT_CONTINENTAL_OCEAN_DEPTH,
+};
+
 // Camera and zoom settings
 export const INITIAL_ZOOM = 0.09; // Starting zoom level (1.0 = 100%)
 export const MIN_ZOOM = 0.01; // Minimum zoom allowed (10%)
@@ -114,17 +145,6 @@ export const INITIAL_OFFSET_Y = WORLD_GRID_HEIGHT / 2; // Initial camera positio
 // Performance settings
 export const LOW_ZOOM_THRESHOLD = 0.5; // Threshold for low zoom performance optimizations
 export const LOW_ZOOM_TILE_FACTOR = 4; // Factor to reduce tile count when zoomed out
-
-// Terrain type identifiers
-export enum TerrainType {
-  OCEAN_DEEP = 0,
-  OCEAN_MEDIUM = 1,
-  OCEAN_SHALLOW = 2,
-  BEACH = 3,
-  GRASS = 4,
-  MOUNTAIN = 5,
-  SNOW = 6,
-}
 
 // Biome identifiers - expanded biome system
 export enum BiomeType {
@@ -161,32 +181,128 @@ export enum BiomeType {
   SNOW = 17,
 }
 
-// Biome weight presets - These determine the relative distribution of terrain types
-// Higher weight means more of that terrain type will appear in the world
+// Biome weight presets - These determine the relative distribution of biome types
+// Higher weight means more of that biome type will appear in the world
+// Note: These weights primarily affect elevation distribution, which in turn affects biome distribution
 export const BIOME_PRESETS = {
   // WORLD preset - Realistic Earth-like world with few large continents surrounded by large oceans
-  WORLD: [80, 10, 10, 5, 35, 25, 20],
+  WORLD: {
+    weights: [80, 10, 10, 5, 35, 25, 20],
+    elevationScale: 180,
+    moistureScale: 200,
+    elevationOctaves: 7,
+    moistureOctaves: 6,
+    elevationPersistence: 0.45,
+    moisturePersistence: 0.5,
+    temperatureParams: {
+      equatorPosition: 0.5,
+      temperatureVariance: 0.1,
+      elevationEffect: 0.3,
+      bandScale: 1.0,
+    },
+    radialGradientParams: {
+      centerX: 0.5,
+      centerY: 0.5,
+      radius: 0.6,
+      falloffExponent: 2.5,
+      strength: 0.7,
+    },
+  },
 
   // CONTINENTS preset - Mostly land with large continents and less water
-  CONTINENTS: [20, 10, 10, 5, 50, 40, 30],
+  CONTINENTS: {
+    weights: [20, 10, 10, 5, 50, 40, 30],
+    elevationScale: 220,
+    moistureScale: 180,
+    elevationOctaves: 5,
+    moistureOctaves: 4,
+    elevationPersistence: 0.5,
+    moisturePersistence: 0.6,
+    temperatureParams: {
+      equatorPosition: 0.5,
+      temperatureVariance: 0.15,
+      elevationEffect: 0.25,
+      bandScale: 0.85,
+    },
+    radialGradientParams: {
+      centerX: 0.5,
+      centerY: 0.5,
+      radius: 0.7,
+      falloffExponent: 3,
+      strength: 0.5,
+    },
+  },
 
   // ISLANDS preset - Many small islands scattered across ocean
-  ISLANDS: [65, 15, 10, 5, 20, 15, 10],
+  ISLANDS: {
+    weights: [65, 15, 10, 5, 20, 15, 10],
+    elevationScale: 120,
+    moistureScale: 150,
+    elevationOctaves: 8,
+    moistureOctaves: 5,
+    elevationPersistence: 0.35,
+    moisturePersistence: 0.4,
+    temperatureParams: {
+      equatorPosition: 0.55,
+      temperatureVariance: 0.08,
+      elevationEffect: 0.35,
+      bandScale: 1.1,
+    },
+    radialGradientParams: {
+      centerX: 0.5,
+      centerY: 0.5,
+      radius: 0.5,
+      falloffExponent: 2,
+      strength: 0.6,
+    },
+  },
 
   // Custom preset - User defined, initially same as CONTINENTS
-  CUSTOM: [20, 10, 10, 5, 50, 40, 30],
+  CUSTOM: {
+    weights: [20, 10, 10, 5, 50, 40, 30],
+    elevationScale: 200,
+    moistureScale: 200,
+    elevationOctaves: 6,
+    moistureOctaves: 5,
+    elevationPersistence: 0.5,
+    moisturePersistence: 0.5,
+    temperatureParams: {
+      equatorPosition: 0.5,
+      temperatureVariance: 0.15,
+      elevationEffect: 0.25,
+      bandScale: 1.0,
+    },
+    radialGradientParams: {
+      centerX: 0.5,
+      centerY: 0.5,
+      radius: 0.6,
+      falloffExponent: 3,
+      strength: 0.6,
+    },
+  },
 };
 
-// Terrain height thresholds (noise values) - these will be dynamically calculated from weights
-// These are default fallback values if weight-based calculation is not used
-export const TERRAIN_HEIGHTS = {
-  [TerrainType.OCEAN_DEEP]: { min: 0.0, max: 0.35 },
-  [TerrainType.OCEAN_MEDIUM]: { min: 0.35, max: 0.4 },
-  [TerrainType.OCEAN_SHALLOW]: { min: 0.4, max: 0.45 },
-  [TerrainType.BEACH]: { min: 0.45, max: 0.5 },
-  [TerrainType.GRASS]: { min: 0.5, max: 0.65 },
-  [TerrainType.MOUNTAIN]: { min: 0.65, max: 0.75 },
-  [TerrainType.SNOW]: { min: 0.75, max: 1.0 },
+// Biome height thresholds (noise values) - these will be dynamically calculated from weights
+// These are default fallback values for elevation bands
+export const BIOME_HEIGHTS = {
+  [BiomeType.OCEAN_DEEP]: { min: 0.0, max: 0.35 },
+  [BiomeType.OCEAN_MEDIUM]: { min: 0.35, max: 0.4 },
+  [BiomeType.OCEAN_SHALLOW]: { min: 0.4, max: 0.45 },
+  [BiomeType.BEACH]: { min: 0.45, max: 0.5 },
+  [BiomeType.ROCKY_SHORE]: { min: 0.45, max: 0.5 },
+  [BiomeType.SUBTROPICAL_DESERT]: { min: 0.5, max: 0.55 },
+  [BiomeType.TEMPERATE_DESERT]: { min: 0.5, max: 0.55 },
+  [BiomeType.TROPICAL_RAINFOREST]: { min: 0.5, max: 0.6 },
+  [BiomeType.TROPICAL_SEASONAL_FOREST]: { min: 0.5, max: 0.6 },
+  [BiomeType.GRASSLAND]: { min: 0.5, max: 0.6 },
+  [BiomeType.TEMPERATE_DECIDUOUS_FOREST]: { min: 0.55, max: 0.65 },
+  [BiomeType.TEMPERATE_GRASSLAND]: { min: 0.55, max: 0.65 },
+  [BiomeType.SHRUBLAND]: { min: 0.55, max: 0.65 },
+  [BiomeType.TAIGA]: { min: 0.6, max: 0.75 },
+  [BiomeType.TUNDRA]: { min: 0.6, max: 0.75 },
+  [BiomeType.BARE]: { min: 0.75, max: 0.85 },
+  [BiomeType.SCORCHED]: { min: 0.85, max: 0.95 },
+  [BiomeType.SNOW]: { min: 0.85, max: 1.0 },
 };
 
 // Default moisture thresholds - used for biome determination
@@ -209,26 +325,49 @@ export const TEMPERATURE_THRESHOLDS = {
   SCORCHING: 1.0,
 };
 
+// Basic elevation bands organized by height - used for biome selection in biomeMapper.ts
+export const ELEVATION_BANDS = {
+  WATER_DEEP: 0.35,
+  WATER_MEDIUM: 0.4,
+  WATER_SHALLOW: 0.45,
+  SHORE: 0.5,
+  LOW: 0.6,
+  MEDIUM: 0.7,
+  HIGH: 0.85,
+  VERY_HIGH: 0.95,
+};
+
 // Function to calculate height thresholds based on weights
 // This is similar to the Python implementation in the reference code
-export const calculateTerrainHeights = (
+export const calculateBiomeHeights = (
   weights: number[]
-): typeof TERRAIN_HEIGHTS => {
+): typeof BIOME_HEIGHTS => {
   // Make a copy of the default heights
-  const newHeights = { ...TERRAIN_HEIGHTS };
+  const newHeights = { ...BIOME_HEIGHTS };
 
   // Calculate total weight sum
   const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
   // Range from 0 to 1
   const totalRange = 1.0;
 
-  // Calculate maximum height for each terrain type based on weight values
+  // Define the basic water and land biomes to set heights for
+  const basicBiomes = [
+    BiomeType.OCEAN_DEEP,
+    BiomeType.OCEAN_MEDIUM,
+    BiomeType.OCEAN_SHALLOW,
+    BiomeType.BEACH,
+    BiomeType.GRASSLAND,
+    BiomeType.BARE,
+    BiomeType.SNOW,
+  ];
+
+  // Calculate maximum height for each basic biome based on weight values
   let previousHeight = 0.0;
-  for (let i = 0; i < weights.length; i++) {
-    const terrainType = i as TerrainType;
+  for (let i = 0; i < weights.length && i < basicBiomes.length; i++) {
+    const biomeType = basicBiomes[i];
     const heightRange = totalRange * (weights[i] / totalWeight);
 
-    newHeights[terrainType] = {
+    newHeights[biomeType] = {
       min: previousHeight,
       max: previousHeight + heightRange,
     };
@@ -236,54 +375,53 @@ export const calculateTerrainHeights = (
     previousHeight += heightRange;
   }
 
-  // Ensure the last terrain type goes to 1.0
+  // Ensure the last biome goes to 1.0
   if (weights.length > 0) {
-    newHeights[(weights.length - 1) as TerrainType].max = 1.0;
+    newHeights[
+      basicBiomes[Math.min(weights.length, basicBiomes.length) - 1]
+    ].max = 1.0;
   }
+
+  // Update related biomes based on the calculated heights
+  newHeights[BiomeType.ROCKY_SHORE] = { ...newHeights[BiomeType.BEACH] };
+  newHeights[BiomeType.SUBTROPICAL_DESERT] = {
+    min: newHeights[BiomeType.BEACH].max,
+    max: newHeights[BiomeType.GRASSLAND].min + 0.05,
+  };
+  newHeights[BiomeType.TEMPERATE_DESERT] = {
+    ...newHeights[BiomeType.SUBTROPICAL_DESERT],
+  };
+  newHeights[BiomeType.TROPICAL_RAINFOREST] = {
+    min: newHeights[BiomeType.BEACH].max,
+    max: newHeights[BiomeType.GRASSLAND].max,
+  };
+  newHeights[BiomeType.TROPICAL_SEASONAL_FOREST] = {
+    ...newHeights[BiomeType.TROPICAL_RAINFOREST],
+  };
+  newHeights[BiomeType.TEMPERATE_DECIDUOUS_FOREST] = {
+    min: newHeights[BiomeType.GRASSLAND].min,
+    max: newHeights[BiomeType.GRASSLAND].max + 0.05,
+  };
+  newHeights[BiomeType.TEMPERATE_GRASSLAND] = {
+    ...newHeights[BiomeType.TEMPERATE_DECIDUOUS_FOREST],
+  };
+  newHeights[BiomeType.SHRUBLAND] = {
+    ...newHeights[BiomeType.TEMPERATE_DECIDUOUS_FOREST],
+  };
+  newHeights[BiomeType.TAIGA] = {
+    min: newHeights[BiomeType.GRASSLAND].max,
+    max: newHeights[BiomeType.BARE].min + 0.05,
+  };
+  newHeights[BiomeType.TUNDRA] = { ...newHeights[BiomeType.TAIGA] };
+  newHeights[BiomeType.SCORCHED] = {
+    min: newHeights[BiomeType.BARE].max,
+    max: 1.0,
+  };
 
   return newHeights;
 };
 
-// Terrain colors (min and max for gradient effect)
-export const TERRAIN_COLORS = {
-  [TerrainType.OCEAN_DEEP]: {
-    min: { r: 30, g: 120, b: 200 },
-    max: { r: 40, g: 176, b: 251 },
-    lerpAdjustment: 0,
-  },
-  [TerrainType.OCEAN_MEDIUM]: {
-    min: { r: 35, g: 140, b: 220 },
-    max: { r: 40, g: 200, b: 255 },
-    lerpAdjustment: 0,
-  },
-  [TerrainType.OCEAN_SHALLOW]: {
-    min: { r: 40, g: 160, b: 230 },
-    max: { r: 40, g: 255, b: 255 },
-    lerpAdjustment: 0,
-  },
-  [TerrainType.BEACH]: {
-    min: { r: 215, g: 192, b: 158 },
-    max: { r: 255, g: 246, b: 193 },
-    lerpAdjustment: 0.3,
-  },
-  [TerrainType.GRASS]: {
-    min: { r: 2, g: 166, b: 155 },
-    max: { r: 118, g: 239, b: 124 },
-    lerpAdjustment: 0,
-  },
-  [TerrainType.MOUNTAIN]: {
-    min: { r: 90, g: 90, b: 90 },
-    max: { r: 120, g: 120, b: 120 },
-    lerpAdjustment: 0,
-  },
-  [TerrainType.SNOW]: {
-    min: { r: 220, g: 220, b: 220 },
-    max: { r: 255, g: 255, b: 255 },
-    lerpAdjustment: -0.5,
-  },
-};
-
-// Extended biome colors for the new biome system
+// Extended biome colors
 export const BIOME_COLORS = {
   // Water biomes
   [BiomeType.OCEAN_DEEP]: { r: 30, g: 120, b: 200 },
@@ -299,46 +437,35 @@ export const BIOME_COLORS = {
   [BiomeType.TEMPERATE_DESERT]: { r: 225, g: 195, b: 120 },
 
   // Humid lowlands
-  [BiomeType.TROPICAL_RAINFOREST]: { r: 40, g: 195, b: 50 },
-  [BiomeType.TROPICAL_SEASONAL_FOREST]: { r: 70, g: 195, b: 90 },
-  [BiomeType.GRASSLAND]: { r: 160, g: 220, b: 110 },
+  [BiomeType.TROPICAL_RAINFOREST]: { r: 35, g: 195, b: 95 },
+  [BiomeType.TROPICAL_SEASONAL_FOREST]: { r: 90, g: 185, b: 90 },
+  [BiomeType.GRASSLAND]: { r: 145, g: 206, b: 80 },
 
   // Medium elevation
-  [BiomeType.TEMPERATE_DECIDUOUS_FOREST]: { r: 50, g: 140, b: 60 },
-  [BiomeType.TEMPERATE_GRASSLAND]: { r: 130, g: 196, b: 90 },
-  [BiomeType.SHRUBLAND]: { r: 160, g: 180, b: 120 },
+  [BiomeType.TEMPERATE_DECIDUOUS_FOREST]: { r: 75, g: 165, b: 80 },
+  [BiomeType.TEMPERATE_GRASSLAND]: { r: 170, g: 200, b: 90 },
+  [BiomeType.SHRUBLAND]: { r: 170, g: 180, b: 110 },
 
-  // High elevation areas
-  [BiomeType.TAIGA]: { r: 120, g: 155, b: 135 },
-  [BiomeType.TUNDRA]: { r: 205, g: 235, b: 240 }, // New whitish-blue color for tundra
+  // High elevation
+  [BiomeType.TAIGA]: { r: 110, g: 160, b: 90 },
+  [BiomeType.TUNDRA]: { r: 180, g: 180, b: 170 },
 
-  // Very high elevation areas
-  [BiomeType.BARE]: { r: 140, g: 135, b: 130 },
-  [BiomeType.SCORCHED]: { r: 95, g: 90, b: 85 },
+  // Very high elevation
+  [BiomeType.BARE]: { r: 140, g: 140, b: 120 },
+  [BiomeType.SCORCHED]: { r: 100, g: 100, b: 100 },
   [BiomeType.SNOW]: { r: 240, g: 240, b: 240 },
 };
 
-// List of terrain types in order of height
-export const ALL_TERRAIN_TYPES = [
-  TerrainType.OCEAN_DEEP,
-  TerrainType.OCEAN_MEDIUM,
-  TerrainType.OCEAN_SHALLOW,
-  TerrainType.BEACH,
-  TerrainType.GRASS,
-  TerrainType.MOUNTAIN,
-  TerrainType.SNOW,
+// List of basic biome types for weight distribution
+export const BASIC_BIOME_TYPES = [
+  BiomeType.OCEAN_DEEP,
+  BiomeType.OCEAN_MEDIUM,
+  BiomeType.OCEAN_SHALLOW,
+  BiomeType.BEACH,
+  BiomeType.GRASSLAND,
+  BiomeType.BARE,
+  BiomeType.SNOW,
 ];
-
-// Terrain type names for UI display
-export const TERRAIN_NAMES = {
-  [TerrainType.OCEAN_DEEP]: "Deep Ocean",
-  [TerrainType.OCEAN_MEDIUM]: "Medium Ocean",
-  [TerrainType.OCEAN_SHALLOW]: "Shallow Ocean",
-  [TerrainType.BEACH]: "Beach",
-  [TerrainType.GRASS]: "Grassland",
-  [TerrainType.MOUNTAIN]: "Mountains",
-  [TerrainType.SNOW]: "Snow",
-};
 
 // Biome type names for UI display
 export const BIOME_NAMES = {
@@ -352,17 +479,17 @@ export const BIOME_NAMES = {
   [BiomeType.TROPICAL_RAINFOREST]: "Tropical Rainforest",
   [BiomeType.TROPICAL_SEASONAL_FOREST]: "Tropical Seasonal Forest",
   [BiomeType.GRASSLAND]: "Grassland",
-  [BiomeType.TEMPERATE_DECIDUOUS_FOREST]: "Deciduous Forest",
+  [BiomeType.TEMPERATE_DECIDUOUS_FOREST]: "Temperate Deciduous Forest",
   [BiomeType.TEMPERATE_GRASSLAND]: "Temperate Grassland",
   [BiomeType.SHRUBLAND]: "Shrubland",
   [BiomeType.TAIGA]: "Taiga",
   [BiomeType.TUNDRA]: "Tundra",
-  [BiomeType.BARE]: "Bare",
-  [BiomeType.SCORCHED]: "Scorched",
+  [BiomeType.BARE]: "Bare Ground",
+  [BiomeType.SCORCHED]: "Scorched Land",
   [BiomeType.SNOW]: "Snow",
 };
 
-// Visualization modes for the map
+// Visualization modes
 export enum VisualizationMode {
   BIOME = "biome", // Normal colored biome view
   NOISE = "noise", // Raw Perlin noise values as grayscale
@@ -370,6 +497,7 @@ export enum VisualizationMode {
   MOISTURE = "moisture", // Moisture using a blue gradient
   TEMPERATURE = "temperature", // Temperature using a temperature gradient
   WEIGHT_DISTRIBUTION = "weight", // Shows how weights affect terrain distribution
+  RESOURCE = "resource", // Shows resources on the map
 }
 
 // Tile grid constants
@@ -451,7 +579,7 @@ export function createConfigObject(
     },
 
     // Biome weights with defaults
-    biomeWeights: params.biomeWeights || BIOME_PRESETS.WORLD,
+    biomeWeights: params.biomeWeights || BIOME_PRESETS.WORLD.weights,
 
     // Thresholds with defaults
     moistureThresholds: params.moistureThresholds || MOISTURE_THRESHOLDS,

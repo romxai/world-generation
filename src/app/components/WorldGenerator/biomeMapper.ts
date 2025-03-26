@@ -2,8 +2,8 @@
  * biomeMapper.ts
  *
  * This module contains functionality for mapping elevation, moisture, and temperature values
- * to specific biomes, creating a realistic world with diverse terrain types.
- * Loosely based on the Whittaker diagram which classifies biomes based on
+ * to specific biomes, creating a realistic world with diverse biome types.
+ * Based on the Whittaker diagram which classifies biomes based on
  * temperature and precipitation (moisture).
  */
 
@@ -13,21 +13,9 @@ import {
   MOISTURE_THRESHOLDS,
   RGB,
   TEMPERATURE_THRESHOLDS,
+  ELEVATION_BANDS,
 } from "./config";
-
-/**
- * Range of values defining elevation bands
- */
-export const ELEVATION_BANDS = {
-  WATER_DEEP: 0.45, // Deep ocean - increased to create more deep ocean
-  WATER_MEDIUM: 0.48, // Medium depth water
-  WATER_SHALLOW: 0.5, // Shallow water - increased to create more defined shorelines
-  SHORE: 0.51, // Beach/shore zone - narrow transition band
-  LOW: 0.55, // Low elevation areas (plains, deserts, etc.)
-  MEDIUM: 0.7, // Medium elevation (hills, forests)
-  HIGH: 0.82, // High elevation (mountains)
-  VERY_HIGH: 0.9, // Very high elevation (peaks)
-};
+import { normalize } from "./noiseGenerator";
 
 /**
  * Interface to store elevation, moisture, and temperature data
@@ -43,10 +31,75 @@ export interface BiomeData {
 }
 
 /**
+ * Helper to convert RGB to CSS string
+ */
+export const rgbToString = (color: RGB): string => {
+  return `rgb(${Math.round(color.r)}, ${Math.round(color.g)}, ${Math.round(
+    color.b
+  )})`;
+};
+
+/**
+ * Linear interpolation between two values
+ */
+export const lerp = (a: number, b: number, t: number): number => {
+  return a + t * (b - a);
+};
+
+/**
+ * Linear interpolation between two colors
+ */
+export const lerpColor = (colorA: RGB, colorB: RGB, t: number): RGB => {
+  return {
+    r: lerp(colorA.r, colorB.r, t),
+    g: lerp(colorA.g, colorB.g, t),
+    b: lerp(colorA.b, colorB.b, t),
+  };
+};
+
+/**
  * Get the color for a given biome
  */
 export function getBiomeColor(biome: BiomeType): RGB {
   return BIOME_COLORS[biome];
+}
+
+/**
+ * Get a color representing elevation for visualization
+ */
+export function getElevationColor(value: number): RGB {
+  // Gradient from deep blue (low) to white (high)
+  if (value < ELEVATION_BANDS.WATER_SHALLOW) {
+    // Water: Deep blue to light blue
+    const normalizedValue = value / ELEVATION_BANDS.WATER_SHALLOW;
+    return {
+      r: Math.floor(normalizedValue * 150),
+      g: Math.floor(100 + normalizedValue * 155),
+      b: 255,
+    };
+  } else {
+    // Land: Green to brown to white
+    const normalizedValue =
+      (value - ELEVATION_BANDS.WATER_SHALLOW) /
+      (1.0 - ELEVATION_BANDS.WATER_SHALLOW);
+    if (normalizedValue < 0.5) {
+      // Green to brown
+      const t = normalizedValue / 0.5;
+      return {
+        r: Math.floor(100 + t * 155),
+        g: Math.floor(255 - t * 100),
+        b: Math.floor(100 - t * 100),
+      };
+    } else {
+      // Brown to white
+      const t = (normalizedValue - 0.5) / 0.5;
+      return {
+        r: Math.floor(255 - t * 50 + t * 50),
+        g: Math.floor(155 + t * 100),
+        b: Math.floor(t * 255),
+      };
+    }
+  }
 }
 
 /**
@@ -208,37 +261,24 @@ export function getMoistureColor(value: number): RGB {
 }
 
 /**
- * Get a color representing elevation for visualization
+ * Get a color representing temperature level for visualization
  */
-export function getElevationColor(value: number): RGB {
-  // Gradient from deep blue (low) to white (high)
-  if (value < 0.5) {
-    // Water: Deep blue to light blue
-    const normalizedValue = value / 0.5;
-    return {
-      r: Math.floor(normalizedValue * 150),
-      g: Math.floor(100 + normalizedValue * 155),
-      b: 255,
-    };
+export function getTemperatureColor(value: number): RGB {
+  if (value < 0.2) {
+    // Cold: blue to white
+    const t = value / 0.2;
+    return { r: 150 * t, g: 150 * t, b: 220 + 35 * t };
+  } else if (value < 0.5) {
+    // Cool: white to green
+    const t = (value - 0.2) / 0.3;
+    return { r: 150 - 100 * t, g: 150 + 60 * t, b: 255 - 155 * t };
+  } else if (value < 0.8) {
+    // Warm: green to yellow
+    const t = (value - 0.5) / 0.3;
+    return { r: 50 + 205 * t, g: 210, b: 100 - 100 * t };
   } else {
-    // Land: Green to brown to white
-    const normalizedValue = (value - 0.5) / 0.5;
-    if (normalizedValue < 0.5) {
-      // Green to brown
-      const t = normalizedValue / 0.5;
-      return {
-        r: Math.floor(100 + t * 155),
-        g: Math.floor(255 - t * 100),
-        b: Math.floor(100 - t * 100),
-      };
-    } else {
-      // Brown to white
-      const t = (normalizedValue - 0.5) / 0.5;
-      return {
-        r: Math.floor(255 - t * 50 + t * 50),
-        g: Math.floor(155 + t * 100),
-        b: Math.floor(t * 255),
-      };
-    }
+    // Hot: yellow to red
+    const t = (value - 0.8) / 0.2;
+    return { r: 255, g: 210 - 190 * t, b: 0 };
   }
 }

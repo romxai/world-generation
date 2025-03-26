@@ -4,7 +4,7 @@
  * Main component that combines UI controls with the world map visualization.
  */
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import GenerationControls from "./UI/GenerationControls";
 import WorldMap from "./WorldMap";
 import {
@@ -16,7 +16,7 @@ import {
   VisualizationMode,
   NOISE_DETAIL,
   NOISE_FALLOFF,
-  calculateTerrainHeights,
+  calculateBiomeHeights,
   DEFAULT_OCTAVES,
   DEFAULT_ELEVATION_SCALE,
   DEFAULT_MOISTURE_SCALE,
@@ -29,6 +29,8 @@ import {
   MOISTURE_THRESHOLDS,
   TEMPERATURE_THRESHOLDS,
   DEFAULT_RADIAL_PARAMS,
+  DEFAULT_CONTINENTAL_PARAMS,
+  ContinentalFalloffParams,
 } from "./config";
 
 export default function WorldGenerator() {
@@ -43,7 +45,7 @@ export default function WorldGenerator() {
   );
   const [biomePreset, setBiomePreset] = useState<string>("WORLD");
   const [biomeWeights, setBiomeWeights] = useState<number[]>(
-    BIOME_PRESETS.WORLD
+    BIOME_PRESETS.WORLD.weights
   );
 
   // Advanced noise settings
@@ -115,7 +117,7 @@ export default function WorldGenerator() {
   // UI state
   const [showWeightEditor, setShowWeightEditor] = useState(false);
   const [customWeights, setCustomWeights] = useState<number[]>([
-    ...BIOME_PRESETS.WORLD,
+    ...BIOME_PRESETS.WORLD.weights,
   ]);
 
   // Threshold controls
@@ -125,6 +127,30 @@ export default function WorldGenerator() {
   const [temperatureThresholds, setTemperatureThresholds] = useState({
     ...TEMPERATURE_THRESHOLDS,
   });
+
+  // Resource controls
+  const [resourceDensity, setResourceDensity] = useState<number>(0.25);
+  const [resourceScale, setResourceScale] = useState<number>(150);
+
+  // Continental falloff parameters
+  const [continentalEnabled, setContinentalEnabled] = useState<boolean>(
+    DEFAULT_CONTINENTAL_PARAMS.enabled || true
+  );
+  const [continentalScale, setContinentalScale] = useState<number>(
+    DEFAULT_CONTINENTAL_PARAMS.scale || 180
+  );
+  const [continentalSharpness, setContinentalSharpness] = useState<number>(
+    DEFAULT_CONTINENTAL_PARAMS.sharpness || 4.0
+  );
+  const [continentalThreshold, setContinentalThreshold] = useState<number>(
+    DEFAULT_CONTINENTAL_PARAMS.threshold || 0.45
+  );
+  const [continentalStrength, setContinentalStrength] = useState<number>(
+    DEFAULT_CONTINENTAL_PARAMS.strength || 0.6
+  );
+  const [continentalOceanDepth, setContinentalOceanDepth] = useState<number>(
+    DEFAULT_CONTINENTAL_PARAMS.oceanDepth || 0.7
+  );
 
   // Generation state
   const [currentGenParams, setCurrentGenParams] = useState({
@@ -160,8 +186,19 @@ export default function WorldGenerator() {
       falloffExponent: radialFalloffExponent,
       strength: radialStrength,
     },
+    continentalFalloffParams: {
+      enabled: continentalEnabled,
+      scale: continentalScale,
+      sharpness: continentalSharpness,
+      threshold: continentalThreshold,
+      strength: continentalStrength,
+      oceanDepth: continentalOceanDepth,
+      noiseOffset: DEFAULT_CONTINENTAL_PARAMS.noiseOffset,
+    },
     moistureThresholds,
     temperatureThresholds,
+    resourceDensity,
+    resourceScale,
   });
 
   // Handle biome preset changes
@@ -171,11 +208,11 @@ export default function WorldGenerator() {
     } else {
       const preset = BIOME_PRESETS[biomePreset as keyof typeof BIOME_PRESETS];
       if (preset) {
-        setBiomeWeights([...preset]);
+        setBiomeWeights([...preset.weights]);
 
         // Update the custom weights when switching to custom preset
         if (biomePreset !== "CUSTOM") {
-          setCustomWeights([...preset]);
+          setCustomWeights([...preset.weights]);
         }
       }
     }
@@ -197,6 +234,38 @@ export default function WorldGenerator() {
       temperatureThresholds,
     }));
   }, [moistureThresholds, temperatureThresholds]);
+
+  // Update resource parameters immediately when they change
+  useEffect(() => {
+    setCurrentGenParams((prev) => ({
+      ...prev,
+      resourceDensity,
+      resourceScale,
+    }));
+  }, [resourceDensity, resourceScale]);
+
+  // Update continental params immediately when they change
+  useEffect(() => {
+    setCurrentGenParams((prev) => ({
+      ...prev,
+      continentalFalloffParams: {
+        enabled: continentalEnabled,
+        scale: continentalScale,
+        sharpness: continentalSharpness,
+        threshold: continentalThreshold,
+        strength: continentalStrength,
+        oceanDepth: continentalOceanDepth,
+        noiseOffset: DEFAULT_CONTINENTAL_PARAMS.noiseOffset,
+      },
+    }));
+  }, [
+    continentalEnabled,
+    continentalScale,
+    continentalSharpness,
+    continentalThreshold,
+    continentalStrength,
+    continentalOceanDepth,
+  ]);
 
   // Generate a new random seed
   const generateNewSeed = () => {
@@ -261,10 +330,30 @@ export default function WorldGenerator() {
         falloffExponent: radialFalloffExponent,
         strength: radialStrength,
       },
+      continentalFalloffParams: {
+        enabled: continentalEnabled,
+        scale: continentalScale,
+        sharpness: continentalSharpness,
+        threshold: continentalThreshold,
+        strength: continentalStrength,
+        oceanDepth: continentalOceanDepth,
+        noiseOffset: DEFAULT_CONTINENTAL_PARAMS.noiseOffset,
+      },
       moistureThresholds,
       temperatureThresholds,
+      resourceDensity,
+      resourceScale,
     });
   };
+
+  // Resource handlers
+  const handleResourceDensityChange = useCallback((value: number) => {
+    setResourceDensity(value);
+  }, []);
+
+  const handleResourceScaleChange = useCallback((value: number) => {
+    setResourceScale(value);
+  }, []);
 
   return (
     <div className="flex flex-col md:flex-row w-full h-full gap-4">
@@ -325,6 +414,19 @@ export default function WorldGenerator() {
           setRadialFalloffExponent={setRadialFalloffExponent}
           radialStrength={radialStrength}
           setRadialStrength={setRadialStrength}
+          // Continental falloff properties
+          continentalEnabled={continentalEnabled}
+          setContinentalEnabled={setContinentalEnabled}
+          continentalSharpness={continentalSharpness}
+          setContinentalSharpness={setContinentalSharpness}
+          continentalScale={continentalScale}
+          setContinentalScale={setContinentalScale}
+          continentalThreshold={continentalThreshold}
+          setContinentalThreshold={setContinentalThreshold}
+          continentalStrength={continentalStrength}
+          setContinentalStrength={setContinentalStrength}
+          continentalOceanDepth={continentalOceanDepth}
+          setContinentalOceanDepth={setContinentalOceanDepth}
           // Biome properties
           biomeWeights={biomeWeights}
           setBiomeWeights={setBiomeWeights}
@@ -341,6 +443,11 @@ export default function WorldGenerator() {
           setMoistureThresholds={setMoistureThresholds}
           temperatureThresholds={temperatureThresholds}
           setTemperatureThresholds={setTemperatureThresholds}
+          // Resource controls
+          resourceDensity={resourceDensity}
+          resourceScale={resourceScale}
+          onResourceDensityChange={handleResourceDensityChange}
+          onResourceScaleChange={handleResourceScaleChange}
         />
       </div>
 
@@ -363,8 +470,11 @@ export default function WorldGenerator() {
           moisturePersistence={currentGenParams.moisturePersistence}
           temperatureParams={currentGenParams.temperatureParams}
           radialGradientParams={currentGenParams.radialGradientParams}
+          continentalFalloffParams={currentGenParams.continentalFalloffParams}
           moistureThresholds={currentGenParams.moistureThresholds}
           temperatureThresholds={currentGenParams.temperatureThresholds}
+          resourceDensity={currentGenParams.resourceDensity}
+          resourceScale={currentGenParams.resourceScale}
         />
       </div>
     </div>

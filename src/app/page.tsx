@@ -10,13 +10,10 @@ import {
   WORLD_GRID_WIDTH,
   WORLD_GRID_HEIGHT,
   BIOME_PRESETS,
-  TerrainType,
   VisualizationMode,
-  TERRAIN_NAMES,
   NOISE_DETAIL,
   NOISE_FALLOFF,
-  calculateTerrainHeights,
-  ALL_TERRAIN_TYPES,
+  calculateBiomeHeights,
   DEFAULT_OCTAVES,
   DEFAULT_ELEVATION_SCALE,
   DEFAULT_MOISTURE_SCALE,
@@ -44,7 +41,7 @@ export default function Home() {
   );
   const [biomePreset, setBiomePreset] = useState<string>("WORLD");
   const [biomeWeights, setBiomeWeights] = useState<number[]>(
-    BIOME_PRESETS.WORLD
+    BIOME_PRESETS.WORLD.weights
   );
 
   // Advanced noise settings
@@ -116,7 +113,7 @@ export default function Home() {
   // UI state
   const [showWeightEditor, setShowWeightEditor] = useState(false);
   const [customWeights, setCustomWeights] = useState<number[]>([
-    ...BIOME_PRESETS.WORLD,
+    ...BIOME_PRESETS.WORLD.weights,
   ]);
 
   // Controls UI state
@@ -160,7 +157,7 @@ export default function Home() {
 
   // Recalculate terrain heights preview when weights change
   const [terrainHeightsPreview, setTerrainHeightsPreview] = useState(
-    calculateTerrainHeights(biomeWeights)
+    calculateBiomeHeights(biomeWeights)
   );
 
   // Handle biome preset changes
@@ -183,7 +180,7 @@ export default function Home() {
 
   // Update terrain heights preview when weights change
   useEffect(() => {
-    setTerrainHeightsPreview(calculateTerrainHeights(biomeWeights));
+    setTerrainHeightsPreview(calculateBiomeHeights(biomeWeights));
   }, [biomeWeights]);
 
   // Update visualization mode immediately

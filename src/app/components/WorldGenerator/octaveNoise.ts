@@ -127,6 +127,38 @@ export class OctaveNoise {
   }
 
   /**
+   * Get the raw noise value at coordinates (x,y) without normalizing to [0,1]
+   * This returns the raw noise in range [-1,1] which is useful for visualizations
+   */
+  getRaw(x: number, y: number): number {
+    let value = 0;
+    let amplitude = 1;
+    let frequency = 1;
+    let maxValue = 0;
+
+    // Add multiple layers of noise
+    for (let i = 0; i < this.octaveCount; i++) {
+      // Calculate noise at this octave, scaled appropriately
+      value +=
+        amplitude *
+        this.noiseGenerators[i].get(
+          (x / this.scale) * frequency,
+          (y / this.scale) * frequency
+        );
+
+      // Keep track of the theoretical maximum value
+      maxValue += amplitude;
+
+      // Prepare for next octave
+      amplitude *= this.persistence;
+      frequency *= 2;
+    }
+
+    // Return the raw value in [-1,1] range, not normalized to [0,1]
+    return (value / maxValue) * 2 - 1;
+  }
+
+  /**
    * Updates the parameters of this noise generator
    * @param params New parameters
    */

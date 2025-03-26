@@ -1,11 +1,12 @@
 /**
  * BiomeControls.tsx
  *
- * Component for controlling biome weights and distribution.
+ * Component with controls for biome distribution and weights
  */
 
 import React from "react";
-import { TerrainType, TERRAIN_NAMES } from "../config";
+import { BiomeType, BIOME_NAMES, BASIC_BIOME_TYPES } from "../config";
+import Slider from "./Slider";
 
 interface BiomeControlsProps {
   biomeWeights: number[];
@@ -24,95 +25,87 @@ const BiomeControls: React.FC<BiomeControlsProps> = ({
   applyCustomWeights,
   showWeightEditor,
 }) => {
-  // Handler for changing a weight value
+  // Handle weight changes
   const handleWeightChange = (index: number, value: number) => {
     const newWeights = [...customWeights];
-    newWeights[index] = Math.max(0, value); // Ensure weights are non-negative
+    newWeights[index] = Math.max(1, value); // Ensure weights are at least 1
     setCustomWeights(newWeights);
   };
 
   return (
-    <div>
-      {showWeightEditor && (
-        <div className="bg-gray-700 p-4 rounded-md mb-4">
-          <h4 className="font-medium mb-3">Terrain Type Weights</h4>
-          <p className="text-sm mb-3">
-            Adjust the weights to control the distribution of terrain types.
-            Higher weights result in more area covered by that terrain type.
+    <div className="p-4 bg-gray-900 rounded-md">
+      <h3 className="text-lg font-semibold mb-4">Biome Distribution</h3>
+
+      {showWeightEditor ? (
+        <div className="space-y-4">
+          <p className="text-sm text-gray-400 mb-3">
+            Adjust the weights to control the distribution of different biomes
+            in the world. Higher weights mean more of that biome type.
           </p>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {customWeights.map((weight, index) => (
-              <div key={index} className="mb-2">
-                <label className="flex justify-between mb-1">
-                  <span className="text-sm">
-                    {TERRAIN_NAMES[index as TerrainType]}
-                  </span>
-                  <span className="text-sm">{weight}</span>
-                </label>
-                <input
-                  type="range"
-                  min="0"
-                  max="100"
-                  value={weight}
-                  onChange={(e) =>
-                    handleWeightChange(index, Number(e.target.value))
-                  }
-                  className="w-full"
-                />
+          {BASIC_BIOME_TYPES.map((biome, index) => (
+            <div key={index}>
+              <div className="flex justify-between mb-1">
+                <span className="text-sm font-medium">
+                  {BIOME_NAMES[biome]}
+                </span>
+                <span className="text-xs text-gray-400">
+                  {customWeights[index]}
+                </span>
               </div>
-            ))}
-          </div>
+              <Slider
+                value={customWeights[index]}
+                min={1}
+                max={100}
+                step={1}
+                onChange={(value) => handleWeightChange(index, value)}
+                label={customWeights[index].toString()}
+              />
+            </div>
+          ))}
 
           <button
             onClick={applyCustomWeights}
-            className="mt-3 bg-blue-600 px-4 py-2 rounded hover:bg-blue-700"
+            className="w-full bg-blue-600 py-2 rounded mt-4 hover:bg-blue-700 transition"
           >
             Apply Custom Weights
           </button>
         </div>
-      )}
+      ) : (
+        <div className="space-y-4">
+          <p className="text-sm text-gray-400 mb-3">
+            Current biome distribution (select 'Custom' preset and 'Edit
+            Weights' to modify):
+          </p>
 
-      <div className="bg-gray-700 p-3 rounded-md">
-        <h4 className="font-medium mb-2">Current Biome Distribution</h4>
-
-        <div className="grid grid-cols-3 gap-2">
-          {biomeWeights.map((weight, index) => (
-            <div
-              key={index}
-              className="flex flex-col items-center bg-gray-800 p-2 rounded"
-            >
-              <div
-                className="w-8 h-8 rounded mb-1"
-                style={{
-                  background: getBiomeColorForIndex(index),
-                }}
-              ></div>
-              <span className="text-xs">
-                {TERRAIN_NAMES[index as TerrainType]}
-              </span>
-              <span className="text-xs text-gray-400">{weight}</span>
+          {BASIC_BIOME_TYPES.map((biome, index) => (
+            <div key={index}>
+              <div className="flex justify-between mb-1">
+                <span className="text-sm font-medium">
+                  {BIOME_NAMES[biome]}
+                </span>
+                <span className="text-xs text-gray-400">
+                  {biomeWeights[index]}
+                </span>
+              </div>
+              <div className="h-3 bg-gray-700 rounded overflow-hidden">
+                <div
+                  className="h-full bg-blue-600"
+                  style={{
+                    width: `${
+                      (biomeWeights[index] /
+                        Math.max(...biomeWeights.slice(0, 7))) *
+                      100
+                    }%`,
+                  }}
+                ></div>
+              </div>
             </div>
           ))}
         </div>
-      </div>
+      )}
     </div>
   );
 };
-
-// Helper function to get a color for a terrain type
-function getBiomeColorForIndex(index: number): string {
-  const colors = [
-    "rgb(30, 120, 200)", // OCEAN_DEEP
-    "rgb(35, 140, 220)", // OCEAN_MEDIUM
-    "rgb(40, 160, 230)", // OCEAN_SHALLOW
-    "rgb(245, 236, 150)", // BEACH
-    "rgb(118, 239, 124)", // GRASS
-    "rgb(90, 90, 90)", // MOUNTAIN
-    "rgb(240, 240, 240)", // SNOW
-  ];
-
-  return colors[index] || "rgb(128, 128, 128)";
-}
 
 export default BiomeControls;
