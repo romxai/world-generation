@@ -59,6 +59,7 @@ const NoiseControls: React.FC<NoiseControlsProps> = ({
           step={1}
           leftLabel={`Low (${noiseDetail})`}
           rightLabel="High"
+          tooltip="Controls the level of detail in the world's terrain. Higher values create more detailed, intricate landscapes but may affect performance."
         />
 
         <Slider
@@ -70,6 +71,7 @@ const NoiseControls: React.FC<NoiseControlsProps> = ({
           step={0.05}
           leftLabel={`Smooth (${noiseFalloff.toFixed(2)})`}
           rightLabel="Sharp"
+          tooltip="Controls how quickly terrain features transition. Lower values create smoother, more gradual changes while higher values create sharper transitions."
         />
       </div>
 
@@ -86,6 +88,7 @@ const NoiseControls: React.FC<NoiseControlsProps> = ({
           step={1}
           leftLabel={`Few (${elevationOctaves})`}
           rightLabel="Many"
+          tooltip="Controls the layering of noise for elevation. More octaves create more complex terrain with both large features and fine details."
         />
 
         <Slider
@@ -97,6 +100,7 @@ const NoiseControls: React.FC<NoiseControlsProps> = ({
           step={10}
           leftLabel={`Small (${elevationScale})`}
           rightLabel="Large"
+          tooltip="Controls the size of elevation features. Higher values create broader mountains and valleys, while lower values create more frequent, smaller features."
         />
 
         <Slider
@@ -108,6 +112,7 @@ const NoiseControls: React.FC<NoiseControlsProps> = ({
           step={0.05}
           leftLabel={`Low (${elevationPersistence.toFixed(2)})`}
           rightLabel="High"
+          tooltip="Controls how much each successive octave contributes to the final elevation. Higher values create more rugged, dramatic terrain."
         />
       </div>
 
@@ -124,6 +129,7 @@ const NoiseControls: React.FC<NoiseControlsProps> = ({
           step={1}
           leftLabel={`Few (${moistureOctaves})`}
           rightLabel="Many"
+          tooltip="Controls the layering of noise for moisture distribution. More octaves create more complex moisture patterns with local variations."
         />
 
         <Slider
@@ -135,6 +141,7 @@ const NoiseControls: React.FC<NoiseControlsProps> = ({
           step={10}
           leftLabel={`Small (${moistureScale})`}
           rightLabel="Large"
+          tooltip="Controls the size of moisture regions. Higher values create broader wet/dry regions, while lower values create more frequent, smaller transitions."
         />
 
         <Slider
@@ -146,6 +153,7 @@ const NoiseControls: React.FC<NoiseControlsProps> = ({
           step={0.05}
           leftLabel={`Low (${moisturePersistence.toFixed(2)})`}
           rightLabel="High"
+          tooltip="Controls how much each successive octave contributes to the final moisture. Higher values create more variable, patchy moisture distribution."
         />
       </div>
     </div>

@@ -515,71 +515,124 @@ export const DEBUG_MODE = true; // Enable or disable debug information
 export const SHOW_GRID = true; // Show grid lines in debug mode
 export const SHOW_COORDS = true; // Show coordinates in debug mode
 
-// Function to collect all configuration parameters for exporting
+/**
+ * Thresholds for elevation levels - used for determining terrain types
+ */
+export const ELEVATION_THRESHOLDS = {
+  WATER_DEEP: 0.45, // Deep ocean
+  WATER_MEDIUM: 0.48, // Medium depth water
+  WATER_SHALLOW: 0.5, // Shallow water
+  SHORE: 0.51, // Beach/shore zone
+  LOW: 0.55, // Low elevation (plains, deserts)
+  MEDIUM: 0.7, // Medium elevation (hills, forests)
+  HIGH: 0.82, // High elevation (mountains)
+  VERY_HIGH: 0.9, // Very high elevation (peaks)
+};
+
+/**
+ * Interface for exported configuration
+ */
 export interface ExportedConfig {
-  // Basic settings
   seed: number;
-  tileSize: number;
-
-  // Noise settings
-  noiseDetail: number;
-  noiseFalloff: number;
-  elevationOctaves: number;
-  moistureOctaves: number;
-  elevationScale: number;
-  moistureScale: number;
-  elevationPersistence: number;
-  moisturePersistence: number;
-
-  // Temperature settings
-  temperatureParams: TemperatureParams;
-
-  // Radial gradient settings
-  radialGradientParams: RadialGradientParams;
-
-  // Biome weights
-  biomeWeights: number[];
-
-  // Thresholds
-  moistureThresholds: typeof MOISTURE_THRESHOLDS;
-  temperatureThresholds: typeof TEMPERATURE_THRESHOLDS;
+  basic: {
+    tileSize: number;
+  };
+  noise: {
+    detail: number;
+    falloff: number;
+    elevation: {
+      octaves: number;
+      scale: number;
+      persistence: number;
+    };
+    moisture: {
+      octaves: number;
+      scale: number;
+      persistence: number;
+    };
+  };
+  temperature: {
+    equatorPosition: number;
+    temperatureVariance: number;
+    elevationEffect: number;
+    bandScale: number;
+    noiseScale: number;
+    noiseOctaves: number;
+    noisePersistence: number;
+    polarTemperature: number;
+    equatorTemperature: number;
+  };
+  radialGradient: {
+    centerX: number;
+    centerY: number;
+    radius: number;
+    falloffExponent: number;
+    strength: number;
+  };
+  biomes: {
+    weights: number[];
+  };
+  thresholds: {
+    moisture: typeof MOISTURE_THRESHOLDS;
+    temperature: typeof TEMPERATURE_THRESHOLDS;
+    elevation: typeof ELEVATION_THRESHOLDS;
+  };
 }
 
 /**
- * Create a configuration object with the current settings
+ * Create a configuration object for export
  */
-export function createConfigObject(
-  params: Partial<ExportedConfig>
-): ExportedConfig {
+export function createConfigObject(config: any): ExportedConfig {
   return {
-    // Basic settings with defaults
-    seed: params.seed || DEFAULT_SEED,
-    tileSize: params.tileSize || DEFAULT_TILE_SIZE,
-
-    // Noise settings with defaults
-    noiseDetail: params.noiseDetail || NOISE_DETAIL,
-    noiseFalloff: params.noiseFalloff || NOISE_FALLOFF,
-    elevationOctaves: params.elevationOctaves || DEFAULT_OCTAVES,
-    moistureOctaves: params.moistureOctaves || DEFAULT_OCTAVES,
-    elevationScale: params.elevationScale || DEFAULT_ELEVATION_SCALE,
-    moistureScale: params.moistureScale || DEFAULT_MOISTURE_SCALE,
-    elevationPersistence: params.elevationPersistence || DEFAULT_OCTAVE_WEIGHT,
-    moisturePersistence: params.moisturePersistence || DEFAULT_OCTAVE_WEIGHT,
-
-    // Temperature settings with defaults
-    temperatureParams: {
-      ...DEFAULT_TEMPERATURE_PARAMS,
-      ...(params.temperatureParams || {}),
+    seed: config.seed,
+    basic: {
+      tileSize: config.tileSize,
     },
-
-    // Radial gradient settings with defaults
-    radialGradientParams: {
-      ...DEFAULT_RADIAL_PARAMS,
-      ...(params.radialGradientParams || {}),
+    noise: {
+      detail: config.noiseDetail,
+      falloff: config.noiseFalloff,
+      elevation: {
+        octaves: config.elevationOctaves,
+        scale: config.elevationScale,
+        persistence: config.elevationPersistence,
+      },
+      moisture: {
+        octaves: config.moistureOctaves,
+        scale: config.moistureScale,
+        persistence: config.moisturePersistence,
+      },
+    },
+    temperature: {
+      equatorPosition: config.temperatureParams.equatorPosition,
+      temperatureVariance: config.temperatureParams.temperatureVariance,
+      elevationEffect: config.temperatureParams.elevationEffect,
+      bandScale: config.temperatureParams.bandScale,
+      noiseScale:
+        config.temperatureParams.noiseScale ||
+        DEFAULT_TEMPERATURE_PARAMS.noiseScale!,
+      noiseOctaves:
+        config.temperatureParams.noiseOctaves ||
+        DEFAULT_TEMPERATURE_PARAMS.noiseOctaves!,
+      noisePersistence:
+        config.temperatureParams.noisePersistence ||
+        DEFAULT_TEMPERATURE_PARAMS.noisePersistence!,
+      polarTemperature:
+        config.temperatureParams.polarTemperature ||
+        DEFAULT_TEMPERATURE_PARAMS.polarTemperature!,
+      equatorTemperature:
+        config.temperatureParams.equatorTemperature ||
+        DEFAULT_TEMPERATURE_PARAMS.equatorTemperature!,
+    },
+    radialGradient: {
+      centerX: config.radialGradientParams.centerX,
+      centerY: config.radialGradientParams.centerY,
+      radius: config.radialGradientParams.radius,
+      falloffExponent: config.radialGradientParams.falloffExponent,
+      strength: config.radialGradientParams.strength,
     },
 
     // Biome weights with defaults
-    biomeWeights: params.biomeWeights || BIOME_PRESETS.WORLD.weights,
+    biomeWeights: params.biomeWeights || BIOME_PRESETS.WORLD,
 
     // Thresholds with defaults
     moistureThresholds: params.moistureThresholds || MOISTURE_THRESHOLDS,

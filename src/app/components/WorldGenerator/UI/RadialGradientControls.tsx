@@ -34,35 +34,39 @@ const RadialGradientControls: React.FC<RadialGradientControlsProps> = ({
   setRadialStrength,
 }) => {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div className="grid grid-cols-1 gap-4">
       <div className="bg-gray-700 p-3 rounded-md">
-        <h4 className="font-medium mb-2">Gradient Center</h4>
+        <h4 className="font-medium mb-2">Ocean Basin Shape</h4>
+        <p className="text-xs text-gray-300 mb-3">
+          These settings control how the world's oceans are shaped, affecting
+          whether your world will have continents, islands, or a mix of both.
+        </p>
 
-        <Slider
-          label="Center X Position"
-          value={radialCenterX}
-          onChange={setRadialCenterX}
-          min={0}
-          max={1}
-          step={0.05}
-          leftLabel={`Left (${radialCenterX.toFixed(2)})`}
-          rightLabel="Right"
-        />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Slider
+            label="Center X"
+            value={radialCenterX}
+            onChange={setRadialCenterX}
+            min={0}
+            max={1}
+            step={0.05}
+            leftLabel={`Left (${radialCenterX.toFixed(2)})`}
+            rightLabel="Right"
+            tooltip="Controls the horizontal position of the landmass center. 0.5 centers it in the middle of the map, lower values move it left, higher values move it right."
+          />
 
-        <Slider
-          label="Center Y Position"
-          value={radialCenterY}
-          onChange={setRadialCenterY}
-          min={0}
-          max={1}
-          step={0.05}
-          leftLabel={`Top (${radialCenterY.toFixed(2)})`}
-          rightLabel="Bottom"
-        />
-      </div>
-
-      <div className="bg-gray-700 p-3 rounded-md">
-        <h4 className="font-medium mb-2">Gradient Intensity</h4>
+          <Slider
+            label="Center Y"
+            value={radialCenterY}
+            onChange={setRadialCenterY}
+            min={0}
+            max={1}
+            step={0.05}
+            leftLabel={`Top (${radialCenterY.toFixed(2)})`}
+            rightLabel="Bottom"
+            tooltip="Controls the vertical position of the landmass center. 0.5 centers it in the middle of the map, lower values move it up, higher values move it down."
+          />
+        </div>
 
         <Slider
           label="Inner Radius"
@@ -73,17 +77,19 @@ const RadialGradientControls: React.FC<RadialGradientControlsProps> = ({
           step={0.05}
           leftLabel={`Small (${radialRadius.toFixed(2)})`}
           rightLabel="Large"
+          tooltip="Controls the size of the inner landmass area. Lower values create smaller continents surrounded by more ocean, while higher values create larger landmasses with smaller oceans."
         />
 
         <Slider
           label="Falloff Exponent"
           value={radialFalloffExponent}
           onChange={setRadialFalloffExponent}
-          min={1}
+          min={0.5}
           max={5}
-          step={0.2}
+          step={0.1}
           leftLabel={`Gradual (${radialFalloffExponent.toFixed(1)})`}
           rightLabel="Sharp"
+          tooltip="Controls how sharply land transitions to ocean at the edges. Lower values create gradual coastlines with many islands, while higher values create more defined, sharper coastlines."
         />
 
         <Slider
@@ -95,6 +101,7 @@ const RadialGradientControls: React.FC<RadialGradientControlsProps> = ({
           step={0.05}
           leftLabel={`Weak (${radialStrength.toFixed(2)})`}
           rightLabel="Strong"
+          tooltip="Controls how strongly the radial gradient affects the overall terrain. Lower values allow more noise influence for varied terrain, while higher values enforce a more circular landmass pattern."
         />
       </div>
 

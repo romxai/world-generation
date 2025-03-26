@@ -72,9 +72,14 @@ export interface WorldGeneratorConfig {
   radialGradientParams: RadialGradientParams;
   continentalFalloffParams?: ContinentalFalloffParams;
   moistureThresholds?: any; // Using 'any' temporarily, ideally should be properly typed
+<<<<<<< HEAD
   temperatureThresholds?: any; // Using 'any' temporarily
   resourceDensity?: number;
   resourceScale?: number;
+=======
+  temperatureThresholds?: any; // Using 'any' temporarily, ideally should be properly typed
+  elevationThresholds?: any; // Using 'any' temporarily, ideally should be properly typed
+>>>>>>> 80502046d576f72739e673a4aeafd82df96a0a43
 }
 
 /**
@@ -89,7 +94,11 @@ export class WorldGenerator {
   private resourceGenerator: ResourceGenerator;
   private moistureThresholds: any; // Using 'any' temporarily
   private temperatureThresholds: any; // Using 'any' temporarily
+<<<<<<< HEAD
   private biomeHeights: typeof BIOME_HEIGHTS;
+=======
+  private elevationThresholds: any; // Using 'any' temporarily
+>>>>>>> 80502046d576f72739e673a4aeafd82df96a0a43
 
   /**
    * Create a new world generator with the specified configuration
@@ -106,6 +115,7 @@ export class WorldGenerator {
     // Store thresholds
     this.moistureThresholds = config.moistureThresholds || {};
     this.temperatureThresholds = config.temperatureThresholds || {};
+    this.elevationThresholds = config.elevationThresholds || {};
 
     // Create noise generators for elevation and moisture
     this.elevationNoise = createElevationNoise(
@@ -169,6 +179,9 @@ export class WorldGenerator {
     }
     if (newConfig.temperatureThresholds) {
       this.temperatureThresholds = newConfig.temperatureThresholds;
+    }
+    if (newConfig.elevationThresholds) {
+      this.elevationThresholds = newConfig.elevationThresholds;
     }
 
     // If seed changed, recreate the noise generators
@@ -385,6 +398,7 @@ export class WorldGenerator {
       y,
       moistureThresholds: this.moistureThresholds,
       temperatureThresholds: this.temperatureThresholds,
+      elevationThresholds: this.elevationThresholds,
     };
   }
 

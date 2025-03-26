@@ -26,6 +26,9 @@ import {
   DEFAULT_TEMPERATURE_BAND_SCALE,
   DEFAULT_TEMPERATURE_PARAMS,
   DEFAULT_RADIAL_PARAMS,
+  MOISTURE_THRESHOLDS,
+  TEMPERATURE_THRESHOLDS,
+  ELEVATION_THRESHOLDS,
 } from "./components/WorldGenerator/config";
 import GenerationControls from "./components/WorldGenerator/UI/GenerationControls";
 
@@ -119,6 +122,17 @@ export default function Home() {
   // Controls UI state
   const [showControls, setShowControls] = useState(true);
 
+  // Add threshold states
+  const [moistureThresholds, setMoistureThresholds] =
+    useState(MOISTURE_THRESHOLDS);
+  const [temperatureThresholds, setTemperatureThresholds] = useState(
+    TEMPERATURE_THRESHOLDS
+  );
+
+  // Add elevation thresholds state
+  const [elevationThresholds, setElevationThresholds] =
+    useState(ELEVATION_THRESHOLDS);
+
   // Generation state
   const [currentGenParams, setCurrentGenParams] = useState({
     seed,
@@ -153,6 +167,9 @@ export default function Home() {
       falloffExponent: radialFalloffExponent,
       strength: radialStrength,
     },
+    moistureThresholds,
+    temperatureThresholds,
+    elevationThresholds,
   });
 
   // Recalculate terrain heights preview when weights change
@@ -190,6 +207,17 @@ export default function Home() {
       visualizationMode,
     }));
   }, [visualizationMode]);
+
+  // Add a useEffect to update the currentGenParams immediately when thresholds change
+  useEffect(() => {
+    // Update current generation parameters when thresholds change
+    setCurrentGenParams((prev) => ({
+      ...prev,
+      moistureThresholds,
+      temperatureThresholds,
+      elevationThresholds,
+    }));
+  }, [moistureThresholds, temperatureThresholds, elevationThresholds]);
 
   // Generate a new random seed
   const generateNewSeed = () => {
@@ -257,8 +285,101 @@ export default function Home() {
         falloffExponent: radialFalloffExponent,
         strength: radialStrength,
       },
+      moistureThresholds,
+      temperatureThresholds,
+      elevationThresholds,
     });
   };
+
+  // Add useEffect for handling configuration import events
+  useEffect(() => {
+    // Event handler for configuration import
+    const handleConfigImport = (event: CustomEvent) => {
+      const importedConfig = event.detail;
+
+      // Update basic settings
+      if (importedConfig.seed !== undefined) setSeed(importedConfig.seed);
+      if (importedConfig.basic?.tileSize !== undefined)
+        setTileSize(importedConfig.basic.tileSize);
+
+      // Update noise settings
+      if (importedConfig.noise?.detail !== undefined)
+        setNoiseDetail(importedConfig.noise.detail);
+      if (importedConfig.noise?.falloff !== undefined)
+        setNoiseFalloff(importedConfig.noise.falloff);
+      if (importedConfig.noise?.elevation?.octaves !== undefined)
+        setElevationOctaves(importedConfig.noise.elevation.octaves);
+      if (importedConfig.noise?.moisture?.octaves !== undefined)
+        setMoistureOctaves(importedConfig.noise.moisture.octaves);
+      if (importedConfig.noise?.elevation?.scale !== undefined)
+        setElevationScale(importedConfig.noise.elevation.scale);
+      if (importedConfig.noise?.moisture?.scale !== undefined)
+        setMoistureScale(importedConfig.noise.moisture.scale);
+      if (importedConfig.noise?.elevation?.persistence !== undefined)
+        setElevationPersistence(importedConfig.noise.elevation.persistence);
+      if (importedConfig.noise?.moisture?.persistence !== undefined)
+        setMoisturePersistence(importedConfig.noise.moisture.persistence);
+
+      // Update temperature settings
+      if (importedConfig.temperature?.equatorPosition !== undefined)
+        setEquatorPosition(importedConfig.temperature.equatorPosition);
+      if (importedConfig.temperature?.temperatureVariance !== undefined)
+        setTemperatureVariance(importedConfig.temperature.temperatureVariance);
+      if (importedConfig.temperature?.elevationEffect !== undefined)
+        setElevationTempEffect(importedConfig.temperature.elevationEffect);
+      if (importedConfig.temperature?.bandScale !== undefined)
+        setTemperatureBandScale(importedConfig.temperature.bandScale);
+      if (importedConfig.temperature?.noiseScale !== undefined)
+        setTemperatureNoiseScale(importedConfig.temperature.noiseScale);
+      if (importedConfig.temperature?.noiseOctaves !== undefined)
+        setTemperatureNoiseOctaves(importedConfig.temperature.noiseOctaves);
+      if (importedConfig.temperature?.noisePersistence !== undefined)
+        setTemperatureNoisePersistence(
+          importedConfig.temperature.noisePersistence
+        );
+      if (importedConfig.temperature?.polarTemperature !== undefined)
+        setPolarTemperature(importedConfig.temperature.polarTemperature);
+      if (importedConfig.temperature?.equatorTemperature !== undefined)
+        setEquatorTemperature(importedConfig.temperature.equatorTemperature);
+
+      // Update radial gradient settings
+      if (importedConfig.radialGradient?.centerX !== undefined)
+        setRadialCenterX(importedConfig.radialGradient.centerX);
+      if (importedConfig.radialGradient?.centerY !== undefined)
+        setRadialCenterY(importedConfig.radialGradient.centerY);
+      if (importedConfig.radialGradient?.radius !== undefined)
+        setRadialRadius(importedConfig.radialGradient.radius);
+      if (importedConfig.radialGradient?.falloffExponent !== undefined)
+        setRadialFalloffExponent(importedConfig.radialGradient.falloffExponent);
+      if (importedConfig.radialGradient?.strength !== undefined)
+        setRadialStrength(importedConfig.radialGradient.strength);
+
+      // Update biome weights
+      if (importedConfig.biomes?.weights) {
+        setBiomeWeights([...importedConfig.biomes.weights]);
+        setCustomWeights([...importedConfig.biomes.weights]);
+        setBiomePreset("CUSTOM");
+      }
+
+      // Note: Threshold values are already handled in ThresholdControls component
+
+      console.log("Configuration imported successfully");
+    };
+
+    // Add event listener
+    window.addEventListener(
+      "config-imported",
+      handleConfigImport as EventListener
+    );
+
+    // Cleanup
+    return () => {
+      window.removeEventListener(
+        "config-imported",
+        handleConfigImport as EventListener
+      );
+    };
+  }, []); // Empty dependency array to avoid re-registering the listener
 
   return (
     <div className="min-h-screen p-4 flex flex-col items-center bg-gray-900 text-white">
@@ -350,15 +471,21 @@ export default function Home() {
             // Actions
             generateNewSeed={generateNewSeed}
             applyCustomWeights={applyCustomWeights}
+            // Add threshold properties
+            moistureThresholds={moistureThresholds}
+            setMoistureThresholds={setMoistureThresholds}
+            temperatureThresholds={temperatureThresholds}
+            setTemperatureThresholds={setTemperatureThresholds}
+            elevationThresholds={elevationThresholds}
+            setElevationThresholds={setElevationThresholds}
           />
         </div>
       )}
 
       {/* The world map visualization */}
       <div
-        className={`w-full max-w-6xl ${
-          !showControls ? "mt-3" : ""
-        } mb-4 relative bg-black rounded-lg overflow-hidden`}
+        className="w-full max-w-6xl mb-4 relative bg-black rounded-lg overflow-hidden"
+        style={{ height: "70vh" }}
       >
         <WorldMap
           width={WINDOW_WIDTH}
@@ -378,6 +505,9 @@ export default function Home() {
           moisturePersistence={currentGenParams.moisturePersistence}
           temperatureParams={currentGenParams.temperatureParams}
           radialGradientParams={currentGenParams.radialGradientParams}
+          moistureThresholds={currentGenParams.moistureThresholds}
+          temperatureThresholds={currentGenParams.temperatureThresholds}
+          elevationThresholds={currentGenParams.elevationThresholds}
         />
       </div>
 
