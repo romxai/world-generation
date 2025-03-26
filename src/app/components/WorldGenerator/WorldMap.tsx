@@ -49,6 +49,8 @@ import {
 import { WorldGenerator, WorldGeneratorConfig } from "./worldGenerator";
 import { rgbToString } from "./terrainUtils";
 import ProgressBar from "./UI/ProgressBar";
+import NavigationControls from "./UI/NavigationControls";
+import TileInfoPanel from "./UI/TileInfoPanel";
 
 // Define the ContinentalFalloffParams interface
 export interface ContinentalFalloffParams {
@@ -189,6 +191,18 @@ const WorldMap: React.FC<WorldMapProps> = ({
   const [currentVisualizationMode, setVisualizationMode] =
     useState<string>(visualizationMode);
 
+  // Tracking state for tile information
+  const [hoverTileInfo, setHoverTileInfo] = useState<string | null>(null);
+  const [hoverTileCoords, setHoverTileCoords] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
+  const [selectedTileInfo, setSelectedTileInfo] = useState<string | null>(null);
+  const [selectedTileCoords, setSelectedTileCoords] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
+
   // Create world generator with specified parameters
   const worldGeneratorRef = useRef<WorldGenerator>(
     new WorldGenerator({
@@ -216,6 +230,118 @@ const WorldMap: React.FC<WorldMapProps> = ({
       temperatureThresholds,
     })
   );
+
+  // Key states for camera movement
+  const keyStates = useRef<{ [key: string]: boolean }>({
+    ArrowUp: false,
+    ArrowDown: false,
+    ArrowLeft: false,
+    ArrowRight: false,
+  });
+
+  // Handle pan action from navigation buttons - defined BEFORE the keyboard useEffect
+  const handlePan = useCallback(
+    (direction: "up" | "down" | "left" | "right") => {
+      // Determine camera movement speed based on zoom level
+      const speed = CAMERA_SPEED / camera.zoom;
+
+      let newX = camera.x;
+      let newY = camera.y;
+
+      switch (direction) {
+        case "up":
+          newY -= speed;
+          break;
+        case "down":
+          newY += speed;
+          break;
+        case "left":
+          newX -= speed;
+          break;
+        case "right":
+          newX += speed;
+          break;
+      }
+
+      // Clamp camera position to world boundaries
+      newX = Math.max(0, Math.min(WORLD_GRID_WIDTH, newX));
+      newY = Math.max(0, Math.min(WORLD_GRID_HEIGHT, newY));
+
+      setCamera((prevCamera) => ({ ...prevCamera, x: newX, y: newY }));
+      setMapChanged(true);
+    },
+    [camera.zoom, camera.x, camera.y]
+  );
+
+  // Handle zoom action from zoom buttons
+  const handleZoom = useCallback(
+    (zoomIn: boolean) => {
+      const zoomFactor = zoomIn ? 1.2 : 0.8;
+      let newZoom = camera.zoom * zoomFactor;
+
+      // Clamp zoom to defined min/max range
+      newZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, newZoom));
+
+      if (newZoom !== camera.zoom) {
+        setCamera((prevCamera) => ({ ...prevCamera, zoom: newZoom }));
+        setMapChanged(true);
+      }
+    },
+    [camera.zoom]
+  );
+
+  // Handle keyboard events for camera movement - now defined AFTER handlePan
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (Object.keys(keyStates.current).includes(e.key)) {
+        keyStates.current[e.key] = true;
+        // Trigger rendering update when a key is pressed
+        setMapChanged(true);
+      }
+    };
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (Object.keys(keyStates.current).includes(e.key)) {
+        keyStates.current[e.key] = false;
+      }
+    };
+
+    // Process keyboard input for camera movement
+    const updateCameraFromKeyboard = () => {
+      // Convert keyboard input to direction
+      if (keyStates.current.ArrowUp) handlePan("up");
+      if (keyStates.current.ArrowDown) handlePan("down");
+      if (keyStates.current.ArrowLeft) handlePan("left");
+      if (keyStates.current.ArrowRight) handlePan("right");
+
+      // Request next frame update if any key is pressed
+      if (Object.values(keyStates.current).some((value) => value)) {
+        requestAnimationFrame(updateCameraFromKeyboard);
+      }
+    };
+
+    // Start animation loop if any key is pressed
+    const checkKeyboardInput = () => {
+      if (Object.values(keyStates.current).some((value) => value)) {
+        updateCameraFromKeyboard();
+      }
+
+      // Continue checking for keyboard input
+      animationFrameId = requestAnimationFrame(checkKeyboardInput);
+    };
+
+    // Start the keyboard check loop
+    let animationFrameId = requestAnimationFrame(checkKeyboardInput);
+
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+      cancelAnimationFrame(animationFrameId);
+    };
+  }, [handlePan]); // handlePan is now defined before this useEffect
 
   // When generation parameters change, update the world generator
   useEffect(() => {
@@ -253,14 +379,6 @@ const WorldMap: React.FC<WorldMapProps> = ({
     setVisualizationMode(visualizationMode);
   }, [visualizationMode]);
 
-  // Key states for camera movement
-  const keyStates = useRef<{ [key: string]: boolean }>({
-    ArrowUp: false,
-    ArrowDown: false,
-    ArrowLeft: false,
-    ArrowRight: false,
-  });
-
   // Setup offscreen canvas for rendering
   useEffect(() => {
     offscreenCanvasRef.current = document.createElement("canvas");
@@ -268,75 +386,61 @@ const WorldMap: React.FC<WorldMapProps> = ({
     offscreenCanvasRef.current.height = height;
   }, [width, height]);
 
-  // Handle keyboard events for camera movement
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (Object.keys(keyStates.current).includes(e.key)) {
-        keyStates.current[e.key] = true;
-      }
-    };
-
-    const handleKeyUp = (e: KeyboardEvent) => {
-      if (Object.keys(keyStates.current).includes(e.key)) {
-        keyStates.current[e.key] = false;
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    window.addEventListener("keyup", handleKeyUp);
-
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-      window.removeEventListener("keyup", handleKeyUp);
-    };
-  }, []);
-
   // Calculate tile size based on zoom level
-  const calculateTileSize = (zoom: number): number => {
-    return tileSize * zoom;
-  };
+  const calculateTileSize = useCallback(
+    (zoom: number): number => {
+      return tileSize * zoom;
+    },
+    [tileSize]
+  );
 
   // Calculate which grid cells are visible in the current view
-  const getVisibleGridCells = (
-    camera: CameraState,
-    zoom: number,
-    isLowZoom: boolean
-  ): {
-    startX: number;
-    startY: number;
-    endX: number;
-    endY: number;
-    skipFactor: number;
-  } => {
-    // Calculate actual tile size with zoom applied
-    const currentTileSize = calculateTileSize(zoom);
+  const getVisibleGridCells = useCallback(
+    (
+      camera: CameraState,
+      zoom: number,
+      isLowZoom: boolean
+    ): {
+      startX: number;
+      startY: number;
+      endX: number;
+      endY: number;
+      skipFactor: number;
+    } => {
+      // Calculate actual tile size with zoom applied
+      const currentTileSize = calculateTileSize(zoom);
 
-    // Determine skip factor for low zoom levels
-    // This reduces the number of tiles rendered at low zoom levels
-    const skipFactor = isLowZoom ? LOW_ZOOM_TILE_FACTOR : 1;
+      // Determine skip factor for low zoom levels
+      // This reduces the number of tiles rendered at low zoom levels
+      const skipFactor = isLowZoom ? LOW_ZOOM_TILE_FACTOR : 1;
 
-    // Adjust for skip factor when calculating how many tiles to render
-    const tilesX = Math.ceil(width / currentTileSize) + 1; // +1 to handle partial tiles
-    const tilesY = Math.ceil(height / currentTileSize) + 1;
+      // Adjust for skip factor when calculating how many tiles to render
+      const tilesX = Math.ceil(width / currentTileSize) + 1; // +1 to handle partial tiles
+      const tilesY = Math.ceil(height / currentTileSize) + 1;
 
-    // Calculate the starting tile based on camera position
-    // Camera position is center of view, so offset by half the visible tiles
-    // We need to adjust for the skip factor to ensure we get the right starting point
-    const startX = Math.max(
-      0,
-      Math.floor((camera.x - tilesX / 2) / skipFactor) * skipFactor
-    );
-    const startY = Math.max(
-      0,
-      Math.floor((camera.y - tilesY / 2) / skipFactor) * skipFactor
-    );
+      // Calculate the starting tile based on camera position
+      // Camera position is center of view, so offset by half the visible tiles
+      // We need to adjust for the skip factor to ensure we get the right starting point
+      const startX = Math.max(
+        0,
+        Math.floor((camera.x - tilesX / 2) / skipFactor) * skipFactor
+      );
+      const startY = Math.max(
+        0,
+        Math.floor((camera.y - tilesY / 2) / skipFactor) * skipFactor
+      );
 
-    // Calculate the ending tile, clamped to world boundaries
-    const endX = Math.min(WORLD_GRID_WIDTH - 1, startX + tilesX * skipFactor);
-    const endY = Math.min(WORLD_GRID_HEIGHT - 1, startY + tilesY * skipFactor);
+      // Calculate the ending tile, clamped to world boundaries
+      const endX = Math.min(WORLD_GRID_WIDTH - 1, startX + tilesX * skipFactor);
+      const endY = Math.min(
+        WORLD_GRID_HEIGHT - 1,
+        startY + tilesY * skipFactor
+      );
 
-    return { startX, startY, endX, endY, skipFactor };
-  };
+      return { startX, startY, endX, endY, skipFactor };
+    },
+    [calculateTileSize, width, height]
+  );
 
   // Main rendering loop - updates the canvas when needed
   useEffect(() => {
@@ -354,74 +458,6 @@ const WorldMap: React.FC<WorldMapProps> = ({
 
     const offCtx = offscreenCanvas.getContext("2d");
     if (!offCtx) return;
-
-    // Update camera position based on keyboard input
-    const updateCamera = () => {
-      let newX = camera.x;
-      let newY = camera.y;
-
-      // Determine camera movement speed based on zoom level
-      // Moving faster when zoomed out makes navigation more efficient
-      const speed = CAMERA_SPEED / camera.zoom;
-
-      // Apply movement based on which keys are pressed
-      if (keyStates.current.ArrowUp) newY -= speed;
-      if (keyStates.current.ArrowDown) newY += speed;
-      if (keyStates.current.ArrowLeft) newX -= speed;
-      if (keyStates.current.ArrowRight) newX += speed;
-
-      // Clamp camera position to world boundaries
-      newX = Math.max(0, Math.min(WORLD_GRID_WIDTH, newX));
-      newY = Math.max(0, Math.min(WORLD_GRID_HEIGHT, newY));
-
-      // Only update if position changed
-      if (newX !== camera.x || newY !== camera.y) {
-        setCamera((prevCamera) => ({ ...prevCamera, x: newX, y: newY }));
-        setMapChanged(true);
-      }
-    };
-
-    // Set up animation loop for smooth camera movement
-    const handleCameraMovement = () => {
-      updateCamera();
-      animationFrameRef.current = requestAnimationFrame(handleCameraMovement);
-    };
-
-    // Start animation loop and clean up on unmount
-    const animationFrameRef = { current: 0 };
-    animationFrameRef.current = requestAnimationFrame(handleCameraMovement);
-
-    // Handle mouse wheel for zooming
-    const handleWheel = (e: WheelEvent) => {
-      e.preventDefault();
-
-      // Calculate zoom factor based on wheel delta
-      const zoomFactor = 1 - Math.sign(e.deltaY) * 0.1;
-      let newZoom = camera.zoom * zoomFactor;
-
-      // Clamp zoom to defined min/max range
-      newZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, newZoom));
-
-      if (newZoom !== camera.zoom) {
-        setCamera((prevCamera) => ({ ...prevCamera, zoom: newZoom }));
-        setMapChanged(true);
-      }
-    };
-
-    // Add wheel event listener
-    canvas.addEventListener("wheel", handleWheel);
-
-    // Handle mouse movement for position tracking
-    const handleMouseMove = (e: MouseEvent) => {
-      const rect = canvas.getBoundingClientRect();
-      setMousePos({
-        x: e.clientX - rect.left,
-        y: e.clientY - rect.top,
-      });
-    };
-
-    // Add mouse move event listener
-    canvas.addEventListener("mousemove", handleMouseMove);
 
     // Clear the canvas
     offCtx.clearRect(0, 0, width, height);
@@ -511,40 +547,8 @@ const WorldMap: React.FC<WorldMapProps> = ({
     ctx.clearRect(0, 0, width, height);
     ctx.drawImage(offscreenCanvas, 0, 0);
 
-    // Update debug info if enabled
-    if (debug) {
-      // Calculate the world position of the mouse
-      const mouseWorldX =
-        startX + (mousePos.x - width / 2 + offsetX) / currentTileSize;
-      const mouseWorldY =
-        startY + (mousePos.y - height / 2 + offsetY) / currentTileSize;
-
-      // Round to get the tile coordinates
-      const tileX = Math.floor(mouseWorldX);
-      const tileY = Math.floor(mouseWorldY);
-
-      // Check if mouse is over a valid tile
-      if (
-        tileX >= 0 &&
-        tileX < WORLD_GRID_WIDTH &&
-        tileY >= 0 &&
-        tileY < WORLD_GRID_HEIGHT
-      ) {
-        // Get detailed debug info for this tile
-        const debugTileInfo = worldGeneratorRef.current.getDebugInfo(
-          tileX,
-          tileY
-        );
-        setDebugInfo(debugTileInfo);
-      }
-    }
-
-    // Clean up event listeners
-    return () => {
-      cancelAnimationFrame(animationFrameRef.current);
-      canvas.removeEventListener("wheel", handleWheel);
-      canvas.removeEventListener("mousemove", handleMouseMove);
-    };
+    // Rendering complete, reset the change flag
+    setMapChanged(false);
   }, [
     mapChanged,
     width,
@@ -552,177 +556,104 @@ const WorldMap: React.FC<WorldMapProps> = ({
     tileSize,
     camera,
     debug,
-    mousePos,
     currentVisualizationMode,
   ]);
 
-  // Function to get debug information
-  const handleMouseMoveDebug = useCallback(
-    (e: MouseEvent) => {
-      if (!canvasRef.current) return;
+  // Get world coordinates from screen coordinates
+  const screenToWorldCoords = useCallback(
+    (screenX: number, screenY: number) => {
+      if (!canvasRef.current) return null;
 
       const rect = canvasRef.current.getBoundingClientRect();
-      const mouseX = e.clientX - rect.left;
-      const mouseY = e.clientY - rect.top;
+      const canvasX = screenX - rect.left;
+      const canvasY = screenY - rect.top;
 
-      // Calculate the effective tile size based on zoom
-      const effectiveTileSize = tileSize * camera.zoom;
+      // Calculate actual tile size with zoom
+      const currentTileSize = calculateTileSize(camera.zoom);
+
+      // Get visible grid cells to determine start coordinates
+      const isLowZoom = camera.zoom < LOW_ZOOM_THRESHOLD;
+      const { startX, startY } = getVisibleGridCells(
+        camera,
+        camera.zoom,
+        isLowZoom
+      );
+
+      // Calculate camera offset in pixels
+      const offsetX = (camera.x - startX) * currentTileSize;
+      const offsetY = (camera.y - startY) * currentTileSize;
 
       // Convert screen coordinates to world coordinates
-      const worldX = Math.floor(
-        camera.x + (mouseX - width / 2) / effectiveTileSize
-      );
-      const worldY = Math.floor(
-        camera.y + (mouseY - height / 2) / effectiveTileSize
-      );
+      const mouseWorldX =
+        startX + (canvasX - width / 2 + offsetX) / currentTileSize;
+      const mouseWorldY =
+        startY + (canvasY - height / 2 + offsetY) / currentTileSize;
 
-      // Set mouse position for debug display
-      setMousePos({ x: worldX, y: worldY });
+      // Round to get the tile coordinates
+      const tileX = Math.floor(mouseWorldX);
+      const tileY = Math.floor(mouseWorldY);
 
-      // Get debug info
+      // Check if mouse is over a valid tile
       if (
-        worldX >= 0 &&
-        worldX < WORLD_GRID_WIDTH &&
-        worldY >= 0 &&
-        worldY < WORLD_GRID_HEIGHT
+        tileX < 0 ||
+        tileX >= WORLD_GRID_WIDTH ||
+        tileY < 0 ||
+        tileY >= WORLD_GRID_HEIGHT
       ) {
-        const debugText = worldGeneratorRef.current.getDebugInfo(
-          worldX,
-          worldY
-        );
-        setDebugInfo(debugText);
+        return null;
       }
+
+      return { x: tileX, y: tileY };
     },
-    [camera, tileSize, width, height]
+    [camera, tileSize, width, height, calculateTileSize, getVisibleGridCells]
   );
 
-  // Add pan/zoom state
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
-  const lastPosRef = useRef({ x: 0, y: 0 });
-
-  // Pan functionality
-  const handleMouseDown = useCallback(
-    (e: React.MouseEvent) => {
-      if (canvasRef.current) {
-        setIsDragging(true);
-        setDragStart({ x: e.clientX, y: e.clientY });
-        lastPosRef.current = { x: camera.x, y: camera.y };
-      }
-    },
-    [camera]
-  );
-
+  // Handle mouse movement to show hover tile info
   const handleMouseMove = useCallback(
     (e: React.MouseEvent) => {
-      if (isDragging && canvasRef.current) {
-        const dx = (e.clientX - dragStart.x) / camera.zoom;
-        const dy = (e.clientY - dragStart.y) / camera.zoom;
-        setCamera({
-          ...camera,
-          x: lastPosRef.current.x + dx,
-          y: lastPosRef.current.y + dy,
-        });
+      const coords = screenToWorldCoords(e.clientX, e.clientY);
+      if (!coords) {
+        setHoverTileInfo(null);
+        setHoverTileCoords(null);
+        return;
       }
+
+      const { x, y } = coords;
+      setHoverTileCoords({ x, y });
+
+      // Get detailed info for this tile
+      const tileInfo = worldGeneratorRef.current.getDebugInfo(x, y);
+      setHoverTileInfo(tileInfo);
     },
-    [isDragging, dragStart, camera]
+    [screenToWorldCoords]
   );
 
-  const handleMouseUp = useCallback(() => {
-    setIsDragging(false);
-  }, []);
-
-  // Zoom functionality with mouse wheel
-  const handleWheel = useCallback(
-    (e: React.WheelEvent) => {
-      e.preventDefault();
-
-      // Calculate new zoom level
-      const zoomDelta = -e.deltaY * 0.001;
-      const newZoom = Math.max(
-        MIN_ZOOM,
-        Math.min(MAX_ZOOM, camera.zoom * (1 + zoomDelta))
-      );
-
-      // Get the mouse position relative to the canvas
-      const rect = canvasRef.current?.getBoundingClientRect();
-      if (!rect) return;
-
-      const mouseX = e.clientX - rect.left;
-      const mouseY = e.clientY - rect.top;
-
-      // Calculate the world position under the mouse before zooming
-      const worldXBefore = mouseX / camera.zoom - camera.x;
-      const worldYBefore = mouseY / camera.zoom - camera.y;
-
-      // Calculate the world position under the mouse after zooming
-      const worldXAfter = mouseX / newZoom - camera.x;
-      const worldYAfter = mouseY / newZoom - camera.y;
-
-      // Adjust camera position to keep the world position under the mouse constant
-      setCamera({
-        x: camera.x + (worldXAfter - worldXBefore),
-        y: camera.y + (worldYAfter - worldYBefore),
-        zoom: newZoom,
-      });
-    },
-    [camera]
-  );
-
-  // Touch support for mobile
-  const handleTouchStart = useCallback(
-    (e: React.TouchEvent) => {
-      if (e.touches.length === 1) {
-        // Single touch - panning
-        setIsDragging(true);
-        setDragStart({
-          x: e.touches[0].clientX,
-          y: e.touches[0].clientY,
-        });
-        lastPosRef.current = { x: camera.x, y: camera.y };
+  // Handle mouse click to select a tile
+  const handleClick = useCallback(
+    (e: React.MouseEvent) => {
+      const coords = screenToWorldCoords(e.clientX, e.clientY);
+      if (!coords) {
+        return;
       }
-    },
-    [camera]
-  );
 
-  const handleTouchMove = useCallback(
-    (e: React.TouchEvent) => {
-      if (isDragging && e.touches.length === 1) {
-        // Single touch - panning
-        const dx = (e.touches[0].clientX - dragStart.x) / camera.zoom;
-        const dy = (e.touches[0].clientY - dragStart.y) / camera.zoom;
-        setCamera({
-          ...camera,
-          x: lastPosRef.current.x + dx,
-          y: lastPosRef.current.y + dy,
-        });
-      }
-    },
-    [isDragging, dragStart, camera]
-  );
+      const { x, y } = coords;
+      setSelectedTileCoords({ x, y });
 
-  const handleTouchEnd = useCallback(() => {
-    setIsDragging(false);
-  }, []);
+      // Get detailed info for this tile
+      const tileInfo = worldGeneratorRef.current.getDebugInfo(x, y);
+      setSelectedTileInfo(tileInfo);
+    },
+    [screenToWorldCoords]
+  );
 
   return (
-    <div
-      className="relative w-full h-full"
-      style={{ cursor: isDragging ? "grabbing" : "grab" }}
-    >
+    <div className="relative w-full h-full">
       <canvas
         ref={canvasRef}
         width={width}
         height={height}
-        className="cursor-grab"
-        onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
-        onWheel={handleWheel}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
+        onClick={handleClick}
       />
 
       {debug && (
@@ -732,11 +663,26 @@ const WorldMap: React.FC<WorldMapProps> = ({
         </div>
       )}
 
-      {debugInfo && (
-        <div className="absolute bottom-2 left-2 bg-black bg-opacity-75 p-2 rounded text-white text-xs max-w-xs">
-          <pre>{debugInfo}</pre>
-        </div>
+      {/* Hover tile info panel */}
+      {hoverTileInfo && hoverTileCoords && (
+        <TileInfoPanel
+          tileInfo={hoverTileInfo}
+          position="hover"
+          coordinates={hoverTileCoords}
+        />
       )}
+
+      {/* Selected tile info panel */}
+      {selectedTileInfo && selectedTileCoords && (
+        <TileInfoPanel
+          tileInfo={selectedTileInfo}
+          position="selected"
+          coordinates={selectedTileCoords}
+        />
+      )}
+
+      {/* Navigation controls */}
+      <NavigationControls onPan={handlePan} onZoom={handleZoom} />
 
       {/* Progress bar overlay */}
       {isGenerating && <ProgressBar progress={generationProgress} />}
