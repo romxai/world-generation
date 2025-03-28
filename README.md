@@ -1,215 +1,163 @@
-# Advanced Procedural World Generator
+# Procedural World Generation Application
 
-This component provides a complete procedural world generation system with advanced features for creating rich, detailed landscapes with diverse biomes.
+![World Generation Demo](public/image.png) <!-- Suggest adding a screenshot later -->
 
-## Key Features
+A sophisticated procedural world generator that creates realistic biomes with elevation, moisture, and temperature systems, plus resource distribution.
 
-- **Multi-octave Noise Generation**: Combines multiple noise functions at different frequencies and amplitudes to create more natural-looking terrain
-- **Separate Elevation and Moisture Systems**: Uses independent noise generators for elevation and moisture to create diverse biomes
-- **Rich Biome System**: Implements a wide range of biomes based on the Whittaker biome classification, combining elevation and moisture values
-- **Highly Configurable**: All generation parameters can be adjusted via the UI
-- **Interactive Visualization Modes**: View the world through different lenses (biomes, elevation, moisture, etc.)
-- **Performance Optimizations**: Only renders visible portions of the world, with level-of-detail based on zoom level
+## Features
 
-## Technical Implementation
+- **Multi-layered Noise Generation**
+  - Octave-based Perlin noise for terrain
+  - Separate noise layers for elevation/moisture/temperature
+  - Configurable noise parameters (octaves, persistence, lacunarity)
+- **Advanced Biome System**
 
-The world generator is built using multiple modules:
+  - 25+ biome types (from deserts to tundra)
+  - Biome determination through 3-factor system
+  - Radial gradient for continent shaping
+
+- **Resource System**
+
+  - 4 base resources (Iron, Copper, Coal, Gold)
+  - Resource-specific generation rules
+  - Deposit size and density calculations
+
+- **Visualization Modes**
+  - Biome colors
+  - Individual factor views (elevation/moisture/temperature)
+  - Resource overlay
+
+## Technical Architecture
+
+```mermaid
+graph TD
+  A[WorldGenerator] --> B[Noise Generation]
+  A --> C[Biome Mapping]
+  A --> D[Resource Distribution]
+  B --> E[Octave Noise]
+  B --> F[Radial Gradients]
+  C --> G[Temperature Mapper]
+  C --> H[Moisture Calculator]
+  D --> I[Resource Noise]
+  D --> J[Biome Filters]
+```
 
 ### Core Components
 
-- **Config (`config.ts`)**: Central configuration and constants for the generator
-- **Noise Generator (`noiseGenerator.ts`)**: Base Perlin noise implementation
-- **Octave Noise (`octaveNoise.ts`)**: Multi-octave noise system that enhances the base noise
-- **Biome Mapper (`biomeMapper.ts`)**: Maps elevation and moisture values to specific biomes
-- **World Generator (`worldGenerator.ts`)**: Core logic for world generation
-- **WorldMap Component (`WorldMap.tsx`)**: React component for rendering the world
+1. **World Generator (`worldGenerator.ts`)**
 
-### Noise Generation
+   - Combines noise layers into biome data
+   - Handles coordinate transformations
+   - Manages resource distribution rules
 
-The system uses octave noise to create more natural terrain:
+2. **Noise System (`octaveNoise.ts`, `noiseGenerator.ts`)**
 
-1. **Base Noise**: Perlin noise provides the foundation
-2. **Multiple Octaves**: Each octave adds detail at different scales
-3. **Frequency & Amplitude**: Higher frequencies add detail, with decreasing amplitude (persistence)
+   - Multi-octave Perlin noise implementation
+   - Separate configurations for different terrain aspects
+   - Seed-based reproducibility
 
-Example:
+3. **Biome Mapping (`biomeMapper.ts`, `temperatureMapper.ts`)**
 
-```typescript
-// Create noise with 4 octaves
-const elevationNoise = createElevationNoise(seed, 4);
+   - Color mapping based on environmental factors
+   - Temperature simulation with latitude effects
+   - Moisture calculation from elevation and noise
 
-// Get noise value at specific coordinates
-const elevation = elevationNoise.get(x, y);
-```
+4. **Resource System (`config.ts`)**
+   - Type-specific generation parameters
+   - Noise-based density calculations
+   - Biome compatibility filters
 
-### Biome System
+## Configuration Options
 
-Biomes are determined by combining elevation and moisture values:
-
-1. **Elevation Bands**: The world is divided into multiple elevation bands (deep water to high mountains)
-2. **Moisture Levels**: Each location has a moisture value from very dry to very wet
-3. **Biome Classification**: The combination of elevation and moisture determines the biome
-
-Example:
+Key tunable parameters in `config.ts`:
 
 ```typescript
-// Get elevation and moisture values
-const elevation = elevationNoise.get(x, y);
-const moisture = moistureNoise.get(x, y);
-
-// Determine biome
-const biome = getBiomeType(elevation, moisture);
+// Example configuration
+{
+  WORLD_GRID_SIZE: { width: 2048, height: 1024 },
+  BIOME_COLORS: {
+    [BiomeType.TEMPERATE_DESERT]: { r: 238, g: 218, b: 130 },
+    // ... other biome definitions
+  },
+  RESOURCE_CONFIGS: {
+    [ResourceType.IRON]: {
+      baseDensity: 0.15,
+      noiseScale: 150,
+      elevationRange: [0.3, 0.8],
+      // ... resource-specific rules
+    }
+  }
+}
 ```
 
-## Available Biomes
+## Installation & Usage
 
-The system provides a rich set of biomes:
+1. **Requirements**
 
-### Water Biomes
+   - Node.js v18+
+   - npm/yarn
 
-- Deep Ocean
-- Medium Ocean
-- Shallow Ocean
+2. **Setup**
 
-### Shore Biomes
+   ```bash
+   git clone [repository-url]
+   cd procedural-world-generator
+   npm install
+   ```
 
-- Beach
-- Rocky Shore
+3. **Running**
 
-### Low Elevation Biomes
+   ```bash
+   npm run dev
+   ```
 
-- Subtropical Desert (dry)
-- Temperate Desert (dry)
-- Grassland (medium moisture)
-- Tropical Seasonal Forest (wet)
-- Tropical Rainforest (very wet)
+   Visit `http://localhost:3000`
 
-### Medium Elevation Biomes
+4. **Controls**
+   - Adjust seed values
+   - Modify noise parameters
+   - Toggle visualization modes
+   - Regenerate world with new settings
 
-- Temperate Desert (dry)
-- Shrubland (dry to medium)
-- Temperate Grassland (medium)
-- Temperate Deciduous Forest (wet)
+## Optimization Features
 
-### High Elevation Biomes
+- Precomputed gradient maps
+- Noise caching strategies
+- Web Worker integration (potential future expansion)
+- Level-of-detail adjustments
 
-- Shrubland (dry)
-- Taiga (medium to wet)
-- Tundra (wet)
+## Development Guidelines
 
-### Very High Elevation Biomes
+### Key Dependencies
 
-- Bare (dry to medium)
-- Scorched (wet)
-- Snow (highest elevations)
+- Next.js 14
+- TypeScript 5
+- Canvas API
+- Noise algorithms (custom implementation)
 
-## UI Controls
+### Code Structure
 
-The system provides UI controls for adjusting:
-
-- World seed
-- Visualization mode
-- Biome presets
-- Elevation parameters (octaves, scale, persistence)
-- Moisture parameters (octaves, scale, persistence)
-- Display settings (tile size, debug info)
-
-## Performance Considerations
-
-- **Lazy Generation**: Only visible portions of the world are generated
-- **Level of Detail**: Lower zoom levels use larger tiles for better performance
-- **Offscreen Canvas**: Rendering is done to an offscreen canvas before copying
-
-## Files Structure
-
-The generator is composed of several specialized files:
-
-- `config.ts` - Configuration constants, terrain type definitions, and world parameters
-- `noiseGenerator.ts` - Implementation of Perlin noise algorithm with seed support
-- `terrainUtils.ts` - Utilities for terrain generation and coloring
-- `WorldMap.tsx` - Main React component for rendering the world
-
-## How It Works
-
-1. **Fixed World Grid**: The world consists of a fixed 1000x1000 grid of tiles, providing a bounded world that users can explore.
-
-2. **Noise Generation**: The system uses a custom Perlin noise implementation with a configurable seed to ensure reproducible results. The noise values are mapped to different terrain types.
-
-3. **Tile System**: Each tile's terrain type is determined by its corresponding noise value, creating natural-looking continents and islands.
-
-4. **Lazy Loading**: Only tiles visible in the current viewport are generated and rendered, greatly optimizing performance.
-
-5. **Adaptive Detail**: Grid lines and coordinates are only shown when zoomed in enough, providing a cleaner view when zoomed out.
-
-6. **Smooth Zooming**: The zoom centers on the mouse position, creating a natural zooming experience toward what the user is looking at.
-
-7. **Bounded Panning**: Camera movement is constrained to the world boundaries, preventing users from navigating outside the world.
-
-## Usage
-
-```tsx
-import WorldMap from './components/WorldGenerator/WorldMap';
-
-// Basic usage with default values
-<WorldMap />
-
-// With custom parameters
-<WorldMap
-  width={1080}
-  height={720}
-  tileSize={16}
-  seed={42}
-  debug={true}
-/>
+```
+src/
+├── app/
+│ ├── components/
+│ │ └── WorldGenerator/
+│ │ ├── UI/ # Control components
+│ │ ├── config.ts # Constants & configurations
+│ │ ├── biomeMapper.ts # Biome color logic
+│ │ └── worldGenerator.ts # Core generation logic
+│ └── page.tsx # Main view
+└── styles/ # Global CSS
 ```
 
-## Configuration
+## Future Roadmap
 
-You can customize various aspects of the world generation by modifying the `config.ts` file:
+- [ ] Ocean currents simulation
+- [ ] River generation
+- [ ] Erosion simulation
+- [ ] Dynamic climate change
+- [ ] Save/load system for generated worlds
 
-- Window dimensions and base tile size
-- World grid dimensions (1000x1000 by default)
-- Noise parameters (detail, falloff)
-- Terrain heights and colors
-- Camera settings (zoom limits, movement speed)
-- Debug and display settings
+---
 
-## Implementation Details
-
-### Fixed-Size World Grid
-
-The world has a fixed size grid (1000x1000 tiles), which means:
-
-- Total number of tiles stays constant regardless of zoom level
-- At low zoom levels, individual tiles may be too small to see but the terrain is still visible
-- At high zoom levels, individual tiles and grid lines become clearly visible
-
-### Camera System
-
-The camera system uses:
-
-- A zoom factor that scales the visual size of tiles
-- World coordinates for navigation (0,0 to 999,999)
-- Pixel coordinates for rendering
-- Conversion between these coordinate systems for interaction
-
-### Performance Optimizations
-
-- Only tiles visible in the viewport are generated and rendered
-- Offscreen canvas is used for rendering before copying to visible canvas
-- Tiles outside the viewport are not processed at all
-- Grid lines and coordinates are only drawn when zoomed in sufficiently
-
-## Future Extensions
-
-The system is designed to be extendable in several ways:
-
-1. **Tile Ownership**: Since the grid is fixed, each tile can be mapped to an owner or purchase status.
-
-2. **Tileset Support**: The code includes infrastructure for using image-based tilesets instead of colors, with tile edge detection for proper borders.
-
-3. **Biome Variations**: Additional biome types can be easily added by extending the `BiomeType` enum and corresponding color configurations.
-
-4. **Feature Generation**: The system can be extended to add rivers, roads, settlements, etc. on top of the base terrain.
-
-5. **Interaction**: Additional modes for selecting and modifying tiles can be implemented.
+> **Note:** For detailed implementation specifics, refer to the inline documentation in each component. Use the `GenerationControls` component to experiment with different world configurations.
